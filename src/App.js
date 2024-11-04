@@ -1,24 +1,31 @@
-import logo from './logo.svg';
-import './App.css';
+// src/App.js
+import React, { useState } from 'react';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import theme from './theme/theme';
+import SearchForm from './components/SearchForm/SearchForm';
+import NormList from './components/NormList/NormList';
+import { fetchAllData } from './api/fetchAllData';
 
 function App() {
+  const [results, setResults] = useState([]);
+
+  const handleSearch = async (data) => {
+    const result = await fetchAllData(data);
+    if (!result.error) {
+      setResults(result);
+    } else {
+      console.error(result.error);
+    }
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <div>
+        <SearchForm onSearch={handleSearch} />
+        <NormList data={results} />
+      </div>
+    </ThemeProvider>
   );
 }
 

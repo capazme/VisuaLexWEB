@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Layout, Typography, message, Button } from 'antd';
 import { Rnd } from 'react-rnd';
 import SearchForm from './components/SearchForm/SearchForm';
@@ -12,7 +12,9 @@ const { Title } = Typography;
 const App = () => {
   const [results, setResults] = useState([]);
   const [isVisible, setIsVisible] = useState(false);
+  const rndRef = useRef(null);  // Ref per accedere al componente Rnd
 
+  // Funzione di ricerca
   const handleSearch = async (data) => {
     try {
       const result = await fetchAllData(data);
@@ -26,6 +28,13 @@ const App = () => {
     } catch (error) {
       console.error(error);
       message.error('Errore durante la ricerca.');
+    }
+  };
+
+  // Callback per aggiornare la dimensione della tab fluttuante
+  const updateSize = (height) => {
+    if (rndRef.current) {
+      rndRef.current.updateSize({ width: 'auto', height: height + 32 }); // Include padding
     }
   };
 
@@ -49,17 +58,15 @@ const App = () => {
         Cerca Norme
       </Button>
 
-      {/* Scheda fluttuante */}
-      {isVisible && (
+{/* Scheda fluttuante */}
+{isVisible && (
         <Rnd
           default={{
             x: 100,
             y: 100,
-            width: 400,
-            height: 500,
+            width: 'auto',
+            height: 'auto',
           }}
-          minWidth={300}
-          minHeight={400}
           bounds="window"
           style={{
             background: '#fff',
@@ -67,6 +74,10 @@ const App = () => {
             boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
             padding: '16px',
             zIndex: 1500,
+            overflow: 'auto', // Consente al contenitore di adattarsi dinamicamente
+          }}
+          resizeHandleWrapperStyle={{
+            display: 'none', // Nasconde i gestori di ridimensionamento manuale
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -77,7 +88,9 @@ const App = () => {
               Chiudi
             </Button>
           </div>
-          <SearchForm onSearch={handleSearch} />
+          <div>
+            <SearchForm onSearch={handleSearch} />
+          </div>
         </Rnd>
       )}
     </Layout>

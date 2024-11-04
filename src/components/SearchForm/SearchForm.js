@@ -1,9 +1,11 @@
 // src/components/SearchForm/SearchForm.js
 import React, { useState } from 'react';
-import { Form, Input, Button, Radio, Spin, Popover, DatePicker } from 'antd';
+import { Form, Input, Button, Radio, Spin, Popover, DatePicker, Space } from 'antd';
 import { InlineEdit, InputPicker } from 'rsuite';
 import 'rsuite/dist/rsuite.min.css';
+import moment from 'moment';
 
+// Dati per il tipo di atto
 const actTypeData = [
   { label: 'Legge', value: 'legge' },
   { label: 'Decreto Legge', value: 'decreto legge' },
@@ -15,6 +17,7 @@ const actTypeData = [
   { label: 'CDFUE', value: 'cdfue' },
 ];
 
+// Tipi di atto che richiedono campi aggiuntivi
 const requiresActDetails = [
   'legge',
   'decreto legge',
@@ -26,7 +29,7 @@ const requiresActDetails = [
 const SearchForm = ({ onSearch }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [versionDate, setVersionDate] = useState(null);
+  const [versionDate, setVersionDate] = useState(moment());
 
   const handleVersionChange = (e) => {
     const newVersion = e.target.value;
@@ -41,15 +44,17 @@ const SearchForm = ({ onSearch }) => {
       date: values.date || undefined,
       article: values.article,
       version: values.version,
-      version_date: values.version === 'vigente' ? versionDate : undefined,
+      version_date: values.version === 'vigente' ? versionDate.format('YYYY-MM-DD') : undefined,
       annex: values.annex || undefined,
     };
     await onSearch(data);
     setLoading(false);
   };
 
+  // Componente InlineEdit con InputPicker con z-index elevato
   const ActTypeInlineEdit = () => {
     const actTypeValue = form.getFieldValue('act_type') || null;
+
     const handleChange = (value) => form.setFieldsValue({ act_type: value });
 
     return (
@@ -59,6 +64,7 @@ const SearchForm = ({ onSearch }) => {
         defaultValue={actTypeValue}
         onChange={handleChange}
         showControls={false}
+        placeholder="Seleziona un tipo di atto"
         style={{
           display: 'block',
           border: '1px solid #d9d9d9',
@@ -80,6 +86,10 @@ const SearchForm = ({ onSearch }) => {
             padding: '0',
             margin: '0',
             fontSize: '14px',
+            zIndex: 3000,
+          }}
+          menuStyle={{
+            zIndex: 3000,
           }}
           value={actTypeValue}
           onChange={handleChange}
@@ -93,7 +103,7 @@ const SearchForm = ({ onSearch }) => {
     <DatePicker
       value={versionDate}
       onChange={(date) => setVersionDate(date)}
-      defaultValue={new Date()}
+      defaultValue={moment()}
       style={{ width: '100%' }}
       placeholder="Seleziona la data versione"
     />
@@ -106,7 +116,7 @@ const SearchForm = ({ onSearch }) => {
         layout="vertical"
         onFinish={handleSubmit}
         initialValues={{
-          version: 'originale',
+          version: 'vigente',
         }}
         style={{ maxWidth: 600, margin: '0 auto' }}
       >
@@ -139,10 +149,10 @@ const SearchForm = ({ onSearch }) => {
         </Form.Item>
 
         <Form.Item label="Articolo e Allegato">
-          <Input.Group compact>
+          <Space.Compact style={{ width: '100%' }}>
             <Form.Item
               name="article"
-              rules={[{ required: true, message: 'Inserisci l\'articolo!' }]}
+              rules={[{ required: true, message: "Inserisci l'articolo!" }]}
               noStyle
             >
               <Input style={{ width: 'calc(100% - 5em)' }} placeholder="Es. 1, 3-5" />
@@ -150,7 +160,7 @@ const SearchForm = ({ onSearch }) => {
             <Form.Item name="annex" noStyle>
               <Input style={{ width: '5em' }} placeholder="All." />
             </Form.Item>
-          </Input.Group>
+          </Space.Compact>
         </Form.Item>
 
         <Form.Item name="version" label="Versione">
@@ -160,6 +170,7 @@ const SearchForm = ({ onSearch }) => {
               content={<VersionDatePopover />}
               trigger="click"
               placement="bottom"
+              overlayStyle={{ zIndex: 2000 }}
             >
               <Radio value="vigente">Vigente</Radio>
             </Popover>
@@ -167,7 +178,7 @@ const SearchForm = ({ onSearch }) => {
         </Form.Item>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="submit" block>
             Cerca
           </Button>
         </Form.Item>

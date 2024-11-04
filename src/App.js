@@ -1,7 +1,8 @@
 // src/App.js
-import React, { useState, useRef } from 'react';
-import { Layout, Typography, message, Button } from 'antd';
-import { Rnd } from 'react-rnd';
+import React, { useState } from 'react';
+import { Layout, Typography, Button } from 'antd';
+import { useSpring, animated } from 'react-spring';
+import { useDrag } from '@use-gesture/react';
 import SearchForm from './components/SearchForm/SearchForm';
 import NormList from './components/NormList/NormList';
 import { fetchAllData } from './api/fetchAllData';
@@ -11,32 +12,55 @@ const { Title } = Typography;
 
 const App = () => {
   const [results, setResults] = useState([]);
-  const [isVisible, setIsVisible] = useState(false);
-  const rndRef = useRef(null);  // Ref per accedere al componente Rnd
+  const [isOpen, setIsOpen] = useState(false); // Stato per apertura della finestra
+  const [isDragging, setIsDragging] = useState(false); // Stato per identificare il trascinamento
 
-  // Funzione di ricerca
+  const [position, setPosition] = useState({ x: 100, y: 100 });
+
   const handleSearch = async (data) => {
     try {
       const result = await fetchAllData(data);
       if (!result.error) {
         setResults(result);
-        message.success('Ricerca completata con successo!');
+        console.log('Ricerca completata con successo!');
       } else {
         console.error(result.error);
-        message.error('Errore durante la ricerca.');
+        console.error('Errore durante la ricerca.');
       }
     } catch (error) {
-      console.error(error);
-      message.error('Errore durante la ricerca.');
+      console.error('Errore durante la ricerca:', error);
     }
   };
 
-  // Callback per aggiornare la dimensione della tab fluttuante
-  const updateSize = (height) => {
-    if (rndRef.current) {
-      rndRef.current.updateSize({ width: 'auto', height: height + 32 }); // Include padding
+  const handleToggle = () => {
+    if (!isDragging) {
+      setIsOpen(!isOpen);
+      console.log('Form toggle, isOpen:', !isOpen);
     }
   };
+
+  const [{ x, y }, api] = useSpring(() => ({
+    x: position.x,
+    y: position.y,
+    config: { tension: 500, friction: 30 },
+  }));
+
+  const bind = useDrag(
+    ({ active, movement: [mx, my], event, memo = position }) => {
+      event.stopPropagation(); // Previene l’attivazione del clic
+      setIsDragging(active); // Attiva il trascinamento
+
+      if (active) {
+        api.start({ x: memo.x + mx, y: memo.y + my });
+        console.log('Dragging, position:', { x: memo.x + mx, y: memo.y + my });
+      } else {
+        setPosition({ x: memo.x + mx, y: memo.y + my });
+        console.log('Drag end, final position:', { x: memo.x + mx, y: memo.y + my });
+      }
+      return memo;
+    },
+    { filterTaps: true } // Ignora piccoli movimenti come tap
+  );
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -49,49 +73,55 @@ const App = () => {
         <NormList data={results} />
       </Content>
 
-      {/* Bottone per mostrare la scheda */}
-      <Button
-        type="primary"
-        onClick={() => setIsVisible(!isVisible)}
-        style={{ position: 'fixed', top: '1em', right: '1em', zIndex: 1000 }}
+      {/* Pallina fluttuante */}
+      <animated.div
+        {...bind()}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          x,
+          y,
+          zIndex: 1500,
+          width: '50px',
+          height: '50px',
+          borderRadius: '50%',
+          backgroundColor: '#1890ff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+        }}
+        onClick={handleToggle}
       >
-        Cerca Norme
-      </Button>
+        🔍
+      </animated.div>
 
-{/* Scheda fluttuante */}
-{isVisible && (
-        <Rnd
-          default={{
-            x: 100,
-            y: 100,
-            width: 'auto',
-            height: 'auto',
-          }}
-          bounds="window"
+      {/* Finestra di ricerca */}
+      {isOpen && !isDragging && (
+        <animated.div
           style={{
-            background: '#fff',
+            position: 'fixed',
+            top: position.y + 60,
+            left: position.x,
+            zIndex: 1500,
+            width: '300px',
+            padding: '16px',
             borderRadius: '8px',
             boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-            padding: '16px',
-            zIndex: 1500,
-            overflow: 'auto', // Consente al contenitore di adattarsi dinamicamente
-          }}
-          resizeHandleWrapperStyle={{
-            display: 'none', // Nasconde i gestori di ridimensionamento manuale
+            backgroundColor: '#fff',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <Title level={5} style={{ margin: 0 }}>
               Ricerca Norme
             </Title>
-            <Button type="text" onClick={() => setIsVisible(false)}>
+            <Button type="text" onClick={() => setIsOpen(false)}>
               Chiudi
             </Button>
           </div>
-          <div>
-            <SearchForm onSearch={handleSearch} />
-          </div>
-        </Rnd>
+          <SearchForm onSearch={handleSearch} />
+        </animated.div>
       )}
     </Layout>
   );

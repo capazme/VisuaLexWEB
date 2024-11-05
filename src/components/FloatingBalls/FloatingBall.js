@@ -1,16 +1,19 @@
+// src/components/FloatingBalls/FloatingBall.js
+
 import React, { useState } from 'react';
 import { useSpring, animated } from 'react-spring';
 import { useDrag } from '@use-gesture/react';
+import './FloatingBall.styles.css';
 
-const FloatingBall = ({ info, articles, onDrop, setIsDeleteZoneActive, deleteZoneRef }) => {
+const FloatingBall = ({ info, articles, colorMap = {}, onDrop, setIsDeleteZoneActive, deleteZoneRef }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [position, setPosition] = useState({ x: 100, y: 100 });
 
-  // Configurazione della molla per un effetto di rimbalzo più pronunciato
   const [{ x, y }, api] = useSpring(() => ({
     x: position.x,
     y: position.y,
-    config: { tension: 170, friction: 12, mass: 1 },
+    config: { tension: 100, friction: 20, mass: 1.5 },
   }));
 
   const bind = useDrag(
@@ -19,16 +22,17 @@ const FloatingBall = ({ info, articles, onDrop, setIsDeleteZoneActive, deleteZon
       setIsDragging(active);
       if (active) {
         api.start({ x: memo.x + mx, y: memo.y + my });
+        checkIfOverDeleteZone(memo.x + mx, memo.y + my);
       } else {
         setPosition({ x: memo.x + mx, y: memo.y + my });
-        checkIfOverDeleteZone(memo.x + mx, memo.y + my);
+        checkIfOverDeleteZone(memo.x + mx, memo.y + my, true);
       }
       return memo;
     },
     { filterTaps: true }
   );
 
-  const checkIfOverDeleteZone = (x, y) => {
+  const checkIfOverDeleteZone = (x, y, isDrop = false) => {
     if (deleteZoneRef.current) {
       const deleteZoneRect = deleteZoneRef.current.getBoundingClientRect();
       const isOverDeleteZone =
@@ -38,39 +42,53 @@ const FloatingBall = ({ info, articles, onDrop, setIsDeleteZoneActive, deleteZon
         y <= deleteZoneRect.bottom;
 
       setIsDeleteZoneActive(isOverDeleteZone);
-      if (isOverDeleteZone) onDrop();
+      if (isOverDeleteZone && isDrop) onDrop();
     }
   };
+
+  const { tipo_atto, numero_atto, data } = info;
+  const actAbbreviation = getActAbbreviation(tipo_atto);
+  const actFullText = getFullTextDescription(tipo_atto, numero_atto, data);
 
   return (
     <animated.div
       {...bind()}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
         x,
         y,
-        zIndex: 1000,
-        width: '50px',
-        height: '50px',
-        borderRadius: '50%',
-        backgroundColor: '#1890ff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        cursor: 'grab',
-        userSelect: 'none',
-        fontSize: '18px',
-        touchAction: 'none',
+        backgroundColor: colorMap[tipo_atto?.toLowerCase()] || '#1890ff',
       }}
+      className={`floating-ball ${isDragging ? 'dragging' : ''}`}
     >
-      <div>
-        {info.tipo_atto} ({articles.length})
-      </div>
+      <div className="floating-ball__content">{actAbbreviation}</div>
+      {(isDragging || isHovered) && (
+        <div className="floating-ball__tooltip">{actFullText}</div>
+      )}
     </animated.div>
   );
+};
+
+// Funzione per abbreviazione
+const getActAbbreviation = (type) => {
+  const abbreviationMap = {
+    "decreto legislativo": "d.lgs.",
+    "decreto legge": "d.l.",
+    "legge": "legge",
+    "costituzione": "cost.",
+    "codice civile": "c.c.",
+    // Altre abbreviazioni...
+  };
+  return abbreviationMap[type?.toLowerCase()] || type;
+};
+
+// Funzione per testo completo
+const getFullTextDescription = (tipo, numero, data) => {
+  let description = tipo;
+  if (numero) description += ` n. ${numero}`;
+  if (data) description += ` del ${data}`;
+  return description;
 };
 
 export default FloatingBall;

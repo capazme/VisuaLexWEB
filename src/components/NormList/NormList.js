@@ -1,3 +1,5 @@
+// src/components/NormList/NormList.js
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout, Modal, Typography, message } from 'antd';
 import { motion } from 'framer-motion';
@@ -36,7 +38,6 @@ const NormaList = ({ data }) => {
   };
 
   const confirmDelete = () => {
-    console.log(`Confirming delete for candidate key: ${deleteCandidate}`);
     const updatedBalls = { ...floatingBalls };
     delete updatedBalls[deleteCandidate];
     setFloatingBalls(updatedBalls);
@@ -65,17 +66,10 @@ const NormaList = ({ data }) => {
         className={`delete-zone ${isDeleteZoneActive ? 'active' : isDeleteZoneHover ? 'hover' : ''}`}
         onDragOver={(e) => {
           setIsDeleteZoneHover(true);
-          console.log("Ball is hovering over delete zone.");
           e.preventDefault(); // Permette al drop di avvenire
         }}
-        onDragLeave={() => {
-          setIsDeleteZoneHover(false);
-          console.log("Ball left the delete zone.");
-        }}
-        onDrop={() => {
-          setIsDeleteZoneHover(false);
-          console.log("Ball dropped in delete zone.");
-        }}
+        onDragLeave={() => setIsDeleteZoneHover(false)}
+        onDrop={() => setIsDeleteZoneHover(false)}
         animate={{
           background: isDeleteZoneActive
             ? 'linear-gradient(180deg, rgba(255,0,0,1), rgba(255,0,0,0))'
@@ -95,10 +89,7 @@ const NormaList = ({ data }) => {
         title="Conferma Eliminazione"
         open={!!deleteCandidate}
         onOk={confirmDelete}
-        onCancel={() => {
-          console.log("Cancel delete action.");
-          setDeleteCandidate(null);
-        }}
+        onCancel={() => setDeleteCandidate(null)}
         okText="Conferma"
         cancelText="Annulla"
       >

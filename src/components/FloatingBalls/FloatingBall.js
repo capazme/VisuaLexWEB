@@ -5,7 +5,13 @@ import { useDrag } from '@use-gesture/react';
 const FloatingBall = ({ info, articles, onDrop, setIsDeleteZoneActive, deleteZoneRef }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 100, y: 100 });
-  const [{ x, y }, api] = useSpring(() => ({ x: position.x, y: position.y, config: { tension: 500, friction: 30 } }));
+
+  // Configurazione della molla per un effetto di rimbalzo più pronunciato
+  const [{ x, y }, api] = useSpring(() => ({
+    x: position.x,
+    y: position.y,
+    config: { tension: 170, friction: 12, mass: 1 },
+  }));
 
   const bind = useDrag(
     ({ active, movement: [mx, my], event, memo = position }) => {
@@ -45,7 +51,7 @@ const FloatingBall = ({ info, articles, onDrop, setIsDeleteZoneActive, deleteZon
         left: 0,
         x,
         y,
-        zIndex: 3000,
+        zIndex: 1000,
         width: '50px',
         height: '50px',
         borderRadius: '50%',

@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Layout, Typography, message } from 'antd';
+import { Layout, Modal, Typography, message } from 'antd';
+import { motion } from 'framer-motion';
 import FloatingBall from '../FloatingBalls/FloatingBall';
 import './NormList.styles.css';
 
 const NormaList = ({ data }) => {
   const [floatingBalls, setFloatingBalls] = useState({});
+  const [isDeleteZoneHover, setIsDeleteZoneHover] = useState(false);
   const [isDeleteZoneActive, setIsDeleteZoneActive] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState(null);
   const deleteZoneRef = useRef(null);
 
   useEffect(() => {
@@ -14,7 +17,6 @@ const NormaList = ({ data }) => {
       if (doc.info) {
         const { tipo_atto, data: dataNorma, numero_atto } = doc.info;
         const uniqueKey = `${tipo_atto}-${dataNorma || 'null'}-${numero_atto || 'null'}`;
-
         if (updatedBalls[uniqueKey]) {
           updatedBalls[uniqueKey].articles.push(...doc.articles);
         } else {
@@ -28,12 +30,18 @@ const NormaList = ({ data }) => {
     setFloatingBalls(updatedBalls);
   }, [data]);
 
-  const handleDrop = (key) => {
+  const handleDropInDeleteZone = (key) => {
+    console.log(`Dropping ball with key ${key} into delete zone.`);
+    setDeleteCandidate(key);
+  };
+
+  const confirmDelete = () => {
+    console.log(`Confirming delete for candidate key: ${deleteCandidate}`);
     const updatedBalls = { ...floatingBalls };
-    delete updatedBalls[key];
+    delete updatedBalls[deleteCandidate];
     setFloatingBalls(updatedBalls);
+    setDeleteCandidate(null);
     message.success('Norma eliminata con successo.');
-    setIsDeleteZoneActive(false);
   };
 
   return (
@@ -44,35 +52,58 @@ const NormaList = ({ data }) => {
             key={key}
             info={ballData.info}
             articles={ballData.articles}
-            onDrop={() => handleDrop(key)}
+            onDrop={() => handleDropInDeleteZone(key)}
             setIsDeleteZoneActive={setIsDeleteZoneActive}
             deleteZoneRef={deleteZoneRef}
           />
         ))}
       </div>
 
-      {/* Area di eliminazione come cerchio rosso */}
-      <div
+      {/* Area di eliminazione su tutto il bordo inferiore */}
+      <motion.div
         ref={deleteZoneRef}
-        className={`delete-zone ${isDeleteZoneActive ? 'active' : ''}`}
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '20px',
-          width: '80px',
-          height: '80px',
-          borderRadius: '50%',
-          backgroundColor: isDeleteZoneActive ? '#f5222d' : '#ff4d4f',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          textAlign: 'center',
-          fontWeight: 'bold',
+        className={`delete-zone ${isDeleteZoneActive ? 'active' : isDeleteZoneHover ? 'hover' : ''}`}
+        onDragOver={(e) => {
+          setIsDeleteZoneHover(true);
+          console.log("Ball is hovering over delete zone.");
+          e.preventDefault(); // Permette al drop di avvenire
         }}
+        onDragLeave={() => {
+          setIsDeleteZoneHover(false);
+          console.log("Ball left the delete zone.");
+        }}
+        onDrop={() => {
+          setIsDeleteZoneHover(false);
+          console.log("Ball dropped in delete zone.");
+        }}
+        animate={{
+          background: isDeleteZoneActive
+            ? 'linear-gradient(180deg, rgba(255,0,0,1), rgba(255,0,0,0))'
+            : isDeleteZoneHover
+            ? 'linear-gradient(180deg, rgba(255,69,0,0.8), rgba(255,69,0,0))'
+            : 'linear-gradient(180deg, rgba(255,0,0,0.5), rgba(255,0,0,0))',
+        }}
+        transition={{ duration: 0.3 }}
       >
-        Elimina
-      </div>
+        <Typography.Title level={5} style={{ color: '#fff' }}>
+          Trascina qui per eliminare
+        </Typography.Title>
+      </motion.div>
+
+      {/* Modal di conferma eliminazione */}
+      <Modal
+        title="Conferma Eliminazione"
+        open={!!deleteCandidate}
+        onOk={confirmDelete}
+        onCancel={() => {
+          console.log("Cancel delete action.");
+          setDeleteCandidate(null);
+        }}
+        okText="Conferma"
+        cancelText="Annulla"
+      >
+        <p>Sei sicuro di voler eliminare questa norma?</p>
+      </Modal>
     </Layout>
   );
 };

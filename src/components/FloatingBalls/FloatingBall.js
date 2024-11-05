@@ -45,7 +45,7 @@ const FloatingBall = ({ info, articles, onDrop, setIsDeleteZoneActive, deleteZon
         left: 0,
         x,
         y,
-        zIndex: 1500,
+        zIndex: 3000,
         width: '50px',
         height: '50px',
         borderRadius: '50%',

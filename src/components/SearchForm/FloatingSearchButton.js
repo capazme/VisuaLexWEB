@@ -57,7 +57,8 @@ const FloatingSearchButton = ({ onSearch }) => {
           justifyContent: 'center',
           cursor: 'grab',
           userSelect: 'none',
-          fontSize: '25px'
+          fontSize: '25px',
+          touchAction: 'none'
         }}
         onClick={handleToggle}
       >

@@ -43,6 +43,26 @@ code {
   animation: fadeOut 0.3s ease-out;
 }
 
+/* NormList.styles.css */
+.norm-list {
+  padding: 16px;
+}
+.norm-item {
+  padding: 10px;
+}
+
+/* FloatingBall.styles.css */
+.floating-ball {
+  width: 60px;
+  height: 60px;
+  background-color: #1890ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -52,3 +72,4 @@ code {
   from { opacity: 1; }
   to { opacity: 0; }
 }
+

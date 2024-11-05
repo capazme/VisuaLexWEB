@@ -9,16 +9,41 @@ const { Header, Content } = Layout;
 const { Title } = Typography;
 
 const App = () => {
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState({});
 
   const handleSearch = async (data) => {
     try {
-      const result = await fetchAllData(data);
-      if (!result.error) {
-        setResults(result);
+      const newResults = await fetchAllData(data);
+      if (!newResults.error) {
+        const updatedResults = { ...results };
+
+        newResults.forEach((doc) => {
+          const { tipo_atto, data: dataNorma, numero_atto } = doc.norma_data || {};
+          if (tipo_atto && dataNorma !== undefined) {
+            const uniqueKey = `${tipo_atto}-${dataNorma || 'null'}-${numero_atto || 'null'}`;
+
+            if (updatedResults[uniqueKey]) {
+              const articleExists = updatedResults[uniqueKey].articles.some(
+                (article) => article.norma_data.numero_articolo === doc.norma_data.numero_articolo
+              );
+              if (!articleExists) {
+                updatedResults[uniqueKey].articles.push(doc);
+              }
+            } else {
+              updatedResults[uniqueKey] = {
+                info: doc.norma_data,
+                articles: [doc],
+              };
+            }
+          } else {
+            console.warn("Documento senza 'norma_data' o campi mancanti:", doc);
+          }
+        });
+
+        setResults(updatedResults);
         message.success('Ricerca completata con successo!');
       } else {
-        console.error(result.error);
+        console.error(newResults.error);
         message.error('Errore durante la ricerca.');
       }
     } catch (error) {
@@ -35,10 +60,8 @@ const App = () => {
         </Title>
       </Header>
       <Content style={{ padding: '2em' }}>
-        <NormList data={results} />
+        <NormList data={Object.values(results)} />
       </Content>
-
-      {/* Pulsante fluttuante per la ricerca */}
       <FloatingSearchButton onSearch={handleSearch} />
     </Layout>
   );

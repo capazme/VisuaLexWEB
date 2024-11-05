@@ -1,0 +1,27 @@
+/* src/components/NormList/NormList.styles.css */
+.norma-list-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+  }
+  
+  /* NormList.styles.css */
+.delete-zone {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: red;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+  z-index: 100;
+}
+
+.delete-zone.active {
+  background-color: darkred;
+}

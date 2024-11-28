@@ -1,11 +1,13 @@
-// src/components/FloatingSearchBall.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSpring, animated } from 'react-spring';
 import { useDrag } from '@use-gesture/react';
 import { Button, Typography } from 'antd';
 import SearchForm from './SearchForm'; // Importa il tuo modulo di ricerca
 
 const { Title } = Typography;
+
+// Definisci clamp fuori dal componente
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 // Dimensioni della pallina fluttuante e del form
 const BALL_SIZE = 50; // in px
@@ -15,7 +17,6 @@ const FORM_HEIGHT = 400; // approssimazione, potrebbe variare
 const FloatingSearchBall = ({ onSearch }) => {
   const [isOpen, setIsOpen] = useState(false); // Stato per apertura del form
   const [isDragging, setIsDragging] = useState(false); // Stato per il trascinamento
-  const [position, setPosition] = useState({ x: 100, y: 100 }); // Posizione iniziale della palla
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -24,19 +25,46 @@ const FloatingSearchBall = ({ onSearch }) => {
   const ballRef = useRef(null);
   const formRef = useRef(null);
 
+  // Recupera la posizione salvata da localStorage o usa valori predefiniti
+  const getInitialPosition = () => {
+    const savedPosition = JSON.parse(localStorage.getItem('floatingBallPosition'));
+    if (savedPosition) {
+      // Assicurati che la posizione salvata sia entro i limiti della finestra attuale
+      const maxX = window.innerWidth - BALL_SIZE;
+      const maxY = window.innerHeight - BALL_SIZE;
+      return {
+        x: clamp(savedPosition.x, 0, maxX),
+        y: clamp(savedPosition.y, 0, maxY),
+      };
+    }
+    return { x: 100, y: 100 };
+  };
+
+  const [position, setPosition] = useState(getInitialPosition);
+
   // Funzione per aggiornare le dimensioni della finestra
-  const handleResize = () => {
+  const handleResize = useCallback(() => {
     setWindowSize({
       width: window.innerWidth,
       height: window.innerHeight,
     });
-  };
+    // Verifica e correggi la posizione se necessario
+    setPosition((prev) => {
+      const maxX = window.innerWidth - BALL_SIZE;
+      const maxY = window.innerHeight - BALL_SIZE;
+      const newX = clamp(prev.x, 0, maxX);
+      const newY = clamp(prev.y, 0, maxY);
+      const updated = { x: newX, y: newY };
+      localStorage.setItem('floatingBallPosition', JSON.stringify(updated));
+      return updated;
+    });
+  }, []); // Nessuna dipendenza necessaria
 
   useEffect(() => {
     window.addEventListener('resize', handleResize);
     // Pulizia dell'evento
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [handleResize]);
 
   // Calcola i limiti di trascinamento per la pallina
   const getBounds = () => {
@@ -52,9 +80,6 @@ const FloatingSearchBall = ({ onSearch }) => {
     config: { tension: 500, friction: 30 },
   }));
 
-  // Funzione helper per limitare i valori
-  const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-
   // Gestione trascinamento
   const bind = useDrag(
     ({ active, movement: [mx, my], memo = position }) => {
@@ -67,6 +92,7 @@ const FloatingSearchBall = ({ onSearch }) => {
         const finalX = clamp(memo.x + mx, getBounds().minX, getBounds().maxX);
         const finalY = clamp(memo.y + my, getBounds().minY, getBounds().maxY);
         setPosition({ x: finalX, y: finalY });
+        localStorage.setItem('floatingBallPosition', JSON.stringify({ x: finalX, y: finalY }));
       }
       return memo;
     },

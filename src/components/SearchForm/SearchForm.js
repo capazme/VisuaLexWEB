@@ -62,6 +62,27 @@ const SearchForm = ({ onSearch }) => {
     }
   }, [version]);
 
+  // Recupera i dati salvati da localStorage al montaggio
+  useEffect(() => {
+    const savedFormData = JSON.parse(localStorage.getItem('searchFormData'));
+    if (savedFormData) {
+      // Converti le stringhe di data in oggetti moment
+      if (savedFormData.version_date) {
+        savedFormData.version_date = moment(savedFormData.version_date, 'YYYY-MM-DD');
+      }
+      form.setFieldsValue(savedFormData);
+    }
+  }, [form]);
+
+  // Salva i dati del form in localStorage ogni volta che cambiano
+  const handleFormChange = (_, allValues) => {
+    const dataToSave = { ...allValues };
+    if (dataToSave.version_date) {
+      dataToSave.version_date = dataToSave.version_date.format('YYYY-MM-DD');
+    }
+    localStorage.setItem('searchFormData', JSON.stringify(dataToSave));
+  };
+
   const handleSubmit = async (values) => {
     setLoading(true);
     const data = {
@@ -106,11 +127,12 @@ const SearchForm = ({ onSearch }) => {
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
+        onValuesChange={handleFormChange}
         initialValues={{
           version: 'vigente',
           version_date: moment(),
         }}
-        style={{ maxWidth: '100%', margin: '0 auto' }}
+        style={{ maxWidth: 600, margin: '0 auto', marginBottom: '2em' }}
       >
         {/* Tipo Atto: Select Scrollabile */}
         <Form.Item

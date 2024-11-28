@@ -1,7 +1,9 @@
+// src/App.js
 import React, { useState } from 'react';
-import { Layout, Typography } from 'antd';
+import { Layout, Typography, message } from 'antd';
 import FloatingSearchBall from './components/SearchForm/FloatingSearchBall';
 import NormList from './components/NormList/NormList';
+import ArticleDetail from './components/ArticleDetail/ArticleDetail';
 import { fetchAllData } from './api/fetchAllData';
 
 const { Header, Content } = Layout;
@@ -9,14 +11,52 @@ const { Title } = Typography;
 
 const App = () => {
   const [results, setResults] = useState({});
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
 
   const handleSearch = async (data) => {
     try {
-      const newResults = await fetchAllData(data);
-      setResults(newResults);
+      const fetchedData = await fetchAllData(data);
+      if (!fetchedData || fetchedData.error) {
+        console.error(fetchedData?.error || 'Errore sconosciuto');
+        message.error(fetchedData?.error || 'Errore sconosciuto durante la ricerca.');
+        return;
+      }
+
+      // Raggruppa gli articoli per norma
+      const groupedData = fetchedData.reduce((acc, item) => {
+        const { tipo_atto, numero_atto, data } = item.norma_data;
+        const key = `${tipo_atto}-${numero_atto}-${data}`;
+        if (!acc[key]) {
+          acc[key] = {
+            info: {
+              tipo_atto,
+              numero_atto,
+              data,
+            },
+            articles: [],
+          };
+        }
+        acc[key].articles.push(item);
+        return acc;
+      }, {});
+
+      setResults(groupedData);
+      message.success('Ricerca completata con successo.');
     } catch (error) {
       console.error('Errore durante la ricerca:', error);
+      message.error('Errore durante la ricerca. Riprova più tardi.');
     }
+  };
+
+  const handleArticleClick = (article) => {
+    setSelectedArticle(article);
+    setIsArticleModalOpen(true);
+  };
+
+  const handleCloseArticleModal = () => {
+    setIsArticleModalOpen(false);
+    setSelectedArticle(null);
   };
 
   return (
@@ -28,7 +68,14 @@ const App = () => {
       </Header>
       <Content style={{ padding: '2em' }}>
         <FloatingSearchBall onSearch={handleSearch} />
-        <NormList data={Object.values(results)} />
+        <NormList data={Object.values(results)} onArticleClick={handleArticleClick} />
+        {selectedArticle && (
+          <ArticleDetail
+            open={isArticleModalOpen}
+            article={selectedArticle}
+            onClose={handleCloseArticleModal}
+          />
+        )}
       </Content>
     </Layout>
   );

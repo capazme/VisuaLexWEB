@@ -63,7 +63,7 @@ const App = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <Header style={{ backgroundColor: '#fff', padding: '1em' }}>
         <Title level={3} style={{ margin: 0 }}>
-          VisuaLex - Ricerca Norme
+          VisuaLexWEB - DEMO
         </Title>
       </Header>
       <Content style={{ padding: '2em' }}>

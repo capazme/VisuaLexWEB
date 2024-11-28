@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/components/FloatingSearchBall.js
+import React, { useState, useEffect, useRef } from 'react';
 import { useSpring, animated } from 'react-spring';
 import { useDrag } from '@use-gesture/react';
 import { Button, Typography } from 'antd';
@@ -6,10 +7,43 @@ import SearchForm from './SearchForm'; // Importa il tuo modulo di ricerca
 
 const { Title } = Typography;
 
+// Dimensioni della pallina fluttuante e del form
+const BALL_SIZE = 50; // in px
+const FORM_WIDTH = 320; // in px
+const FORM_HEIGHT = 400; // approssimazione, potrebbe variare
+
 const FloatingSearchBall = ({ onSearch }) => {
   const [isOpen, setIsOpen] = useState(false); // Stato per apertura del form
   const [isDragging, setIsDragging] = useState(false); // Stato per il trascinamento
   const [position, setPosition] = useState({ x: 100, y: 100 }); // Posizione iniziale della palla
+  const [windowSize, setWindowSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }); // Dimensioni della finestra
+
+  const ballRef = useRef(null);
+  const formRef = useRef(null);
+
+  // Funzione per aggiornare le dimensioni della finestra
+  const handleResize = () => {
+    setWindowSize({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
+  };
+
+  useEffect(() => {
+    window.addEventListener('resize', handleResize);
+    // Pulizia dell'evento
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calcola i limiti di trascinamento per la pallina
+  const getBounds = () => {
+    const maxX = windowSize.width - BALL_SIZE;
+    const maxY = windowSize.height - BALL_SIZE;
+    return { minX: 0, minY: 0, maxX, maxY };
+  };
 
   // Animazioni con react-spring
   const [{ x, y }, api] = useSpring(() => ({
@@ -18,14 +52,21 @@ const FloatingSearchBall = ({ onSearch }) => {
     config: { tension: 500, friction: 30 },
   }));
 
+  // Funzione helper per limitare i valori
+  const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
   // Gestione trascinamento
   const bind = useDrag(
     ({ active, movement: [mx, my], memo = position }) => {
       setIsDragging(active);
       if (active) {
-        api.start({ x: memo.x + mx, y: memo.y + my });
+        const newX = clamp(memo.x + mx, getBounds().minX, getBounds().maxX);
+        const newY = clamp(memo.y + my, getBounds().minY, getBounds().maxY);
+        api.start({ x: newX, y: newY });
       } else {
-        setPosition({ x: memo.x + mx, y: memo.y + my });
+        const finalX = clamp(memo.x + mx, getBounds().minX, getBounds().maxX);
+        const finalY = clamp(memo.y + my, getBounds().minY, getBounds().maxY);
+        setPosition({ x: finalX, y: finalY });
       }
       return memo;
     },
@@ -39,11 +80,35 @@ const FloatingSearchBall = ({ onSearch }) => {
     }
   };
 
+  // Calcola la posizione del form per evitare che esca dai bordi
+  const getFormPosition = () => {
+    let formX = position.x;
+    let formY = position.y + BALL_SIZE + 10; // 10px di margine
+
+    // Verifica se il form esce dai bordi orizzontali
+    if (formX + FORM_WIDTH > windowSize.width) {
+      formX = windowSize.width - FORM_WIDTH - 10; // 10px di padding
+    }
+
+    // Verifica se il form esce dai bordi verticali
+    if (formY + FORM_HEIGHT > windowSize.height) {
+      formY = position.y - FORM_HEIGHT - 10; // Posiziona sopra la pallina
+      if (formY < 0) {
+        formY = windowSize.height - FORM_HEIGHT - 10; // Ultimo tentativo
+      }
+    }
+
+    return { formX, formY };
+  };
+
+  const { formX, formY } = isOpen ? getFormPosition() : { formX: 0, formY: 0 };
+
   return (
     <>
       {/* Pallina fluttuante */}
       <animated.div
         {...bind()}
+        ref={ballRef}
         style={{
           position: 'fixed',
           top: 0,
@@ -51,19 +116,21 @@ const FloatingSearchBall = ({ onSearch }) => {
           x,
           y,
           zIndex: 1000,
-          width: '50px',
-          height: '50px',
+          width: `${BALL_SIZE}px`,
+          height: `${BALL_SIZE}px`,
           borderRadius: '50%',
           backgroundColor: '#1890ff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          cursor: 'grab',
+          cursor: isDragging ? 'grabbing' : 'grab',
           userSelect: 'none',
           fontSize: '25px',
           touchAction: 'none',
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
         }}
         onClick={toggleForm}
+        aria-label="Apri form di ricerca"
       >
         🔍
       </animated.div>
@@ -71,24 +138,34 @@ const FloatingSearchBall = ({ onSearch }) => {
       {/* Modulo di ricerca */}
       {isOpen && !isDragging && (
         <animated.div
+          ref={formRef}
           style={{
             position: 'fixed',
-            top: position.y + 60, // Posiziona il form sotto la pallina
-            left: position.x,
+            top: formY,
+            left: formX,
             zIndex: 1000,
-            width: '320px',
+            width: `${FORM_WIDTH}px`,
             padding: '16px',
             borderRadius: '8px',
             boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
             backgroundColor: '#fff',
+            maxHeight: windowSize.height - formY - 20, // 20px di padding inferiore
+            overflowY: 'auto',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+            }}
+          >
             <Title level={5} style={{ margin: 0 }}>
               Ricerca Norme
             </Title>
-            <Button type="text" onClick={() => setIsOpen(false)}>
-              X
+            <Button type="text" onClick={() => setIsOpen(false)} aria-label="Chiudi form di ricerca">
+              ✕
             </Button>
           </div>
           <SearchForm onSearch={onSearch} />

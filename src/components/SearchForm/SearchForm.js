@@ -110,7 +110,7 @@ const SearchForm = ({ onSearch }) => {
           version: 'vigente',
           version_date: moment(),
         }}
-        style={{ maxWidth: 600, margin: '0 auto', marginBottom: '2em' }}
+        style={{ maxWidth: '100%', margin: '0 auto' }}
       >
         {/* Tipo Atto: Select Scrollabile */}
         <Form.Item
@@ -224,7 +224,7 @@ const SearchForm = ({ onSearch }) => {
                   visible={isPopoverVisible}
                   onVisibleChange={(visible) => setIsPopoverVisible(visible)}
                 >
-                  <CalendarOutlined style={{ marginLeft: '8px', cursor: 'pointer' }} />
+                  <CalendarOutlined style={{ marginLeft: '8px', cursor: 'pointer' }} aria-label="Seleziona Data Versione" />
                 </Popover>
               </span>
             </Radio>

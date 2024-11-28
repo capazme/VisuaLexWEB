@@ -1,4 +1,3 @@
-// src/components/NormList/NormList.js
 import React from 'react';
 import { Collapse, List, Typography, Badge } from 'antd';
 import PropTypes from 'prop-types';
@@ -26,7 +25,7 @@ const NormList = React.memo(({ data, onArticleClick }) => {
   const collapsePanels = data.map((norm) => {
     const { tipo_atto, numero_atto, data: dataNorma } = norm.info;
     const numeroArticoli = norm.articles.length;
-    const key = norm.key; // Utilizza la chiave unica
+    const key = norm.key; // Assicurati che ogni norma abbia una chiave unica
     const tipoAttoCapitalized = capitalizeFirstLetter(tipo_atto);
 
     // Costruisci il label includendo solo gli elementi definiti
@@ -61,6 +60,8 @@ const NormList = React.memo(({ data, onArticleClick }) => {
             const breveDescrizione = article.article_text
               ? article.article_text.split('\n')[0].trim() // Usa la prima riga del testo dell'articolo come descrizione
               : 'Descrizione non disponibile';
+            const position = article.brocardi_info?.position || 'Posizione non disponibile';
+
             return (
               <List.Item
                 onClick={() => onArticleClick(article)}
@@ -72,6 +73,8 @@ const NormList = React.memo(({ data, onArticleClick }) => {
                   description={
                     <>
                       <Text>{breveDescrizione}</Text>
+                      <br />
+                      <Text type="secondary">Posizione: {position}</Text>
                       <br />
                       <Text type="secondary">Versione: {versione}</Text>
                       {data_versione && (
@@ -119,7 +122,9 @@ NormList.propTypes = {
           }).isRequired,
           article_text: PropTypes.string,
           url: PropTypes.string,
-          brocardi_info: PropTypes.object,
+          brocardi_info: PropTypes.shape({
+            position: PropTypes.string, // Aggiungi il campo position
+          }),
         })
       ).isRequired,
     })

@@ -10,7 +10,7 @@ const { Header, Content } = Layout;
 const { Title } = Typography;
 
 const App = () => {
-  const [results, setResults] = useState({});
+  const [results, setResults] = useState([]); // Inizializza come array
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
 
@@ -27,21 +27,23 @@ const App = () => {
       const groupedData = fetchedData.reduce((acc, item) => {
         const { tipo_atto, numero_atto, data } = item.norma_data;
         const key = `${tipo_atto}-${numero_atto}-${data}`;
-        if (!acc[key]) {
-          acc[key] = {
+        if (!acc.some(norm => norm.key === key)) { // Evita duplicati
+          acc.push({
+            key, // Aggiungi una chiave unica
             info: {
               tipo_atto,
               numero_atto,
               data,
             },
             articles: [],
-          };
+          });
         }
-        acc[key].articles.push(item);
+        const normIndex = acc.findIndex(norm => norm.key === key);
+        acc[normIndex].articles.push(item);
         return acc;
-      }, {});
+      }, []);
 
-      setResults(groupedData);
+      setResults(prevResults => [...prevResults, ...groupedData]); // Appendere i nuovi risultati
       message.success('Ricerca completata con successo.');
     } catch (error) {
       console.error('Errore durante la ricerca:', error);
@@ -63,12 +65,12 @@ const App = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <Header style={{ backgroundColor: '#fff', padding: '1em' }}>
         <Title level={3} style={{ margin: 0 }}>
-          VisuaLexWEB - DEMO
+          VisuaLex - Ricerca Norme
         </Title>
       </Header>
       <Content style={{ padding: '2em' }}>
         <FloatingSearchBall onSearch={handleSearch} />
-        <NormList data={Object.values(results)} onArticleClick={handleArticleClick} />
+        <NormList data={results} onArticleClick={handleArticleClick} /> {/* Passa l'array completo */}
         {selectedArticle && (
           <ArticleDetail
             open={isArticleModalOpen}

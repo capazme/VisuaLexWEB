@@ -26,7 +26,7 @@ const NormList = React.memo(({ data, onArticleClick }) => {
   const collapsePanels = data.map((norm) => {
     const { tipo_atto, numero_atto, data: dataNorma } = norm.info;
     const numeroArticoli = norm.articles.length;
-    const key = `${tipo_atto}-${numero_atto}-${dataNorma}`;
+    const key = norm.key; // Utilizza la chiave unica
     const tipoAttoCapitalized = capitalizeFirstLetter(tipo_atto);
 
     // Costruisci il label includendo solo gli elementi definiti
@@ -51,7 +51,7 @@ const NormList = React.memo(({ data, onArticleClick }) => {
             />
           </span>
         }
-        key={key}
+        key={key} // Assicurati che ogni Panel abbia una chiave unica
       >
         <List
           itemLayout="horizontal"
@@ -103,6 +103,7 @@ const NormList = React.memo(({ data, onArticleClick }) => {
 NormList.propTypes = {
   data: PropTypes.arrayOf(
     PropTypes.shape({
+      key: PropTypes.string.isRequired, // Aggiungi la proprietà key
       info: PropTypes.shape({
         tipo_atto: PropTypes.string.isRequired,
         numero_atto: PropTypes.string,

@@ -1,21 +1,12 @@
 // src/theme/theme.js
-import { createTheme } from '@mui/material/styles';
-
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#0a84ff', // Colore principale
-    },
-    secondary: {
-      main: '#5e5ce6',
-    },
-    background: {
-      default: '#f2f2f7',
-    },
-  },
-  typography: {
+const customTheme = {
+  token: {
+    colorPrimary: '#0a84ff',
+    colorSecondary: '#5e5ce6',
+    colorBgContainer: '#f2f2f7',
     fontFamily: 'Roboto, sans-serif',
   },
-});
+  // Puoi aggiungere ulteriori personalizzazioni qui
+};
 
-export default theme;
+export default customTheme;

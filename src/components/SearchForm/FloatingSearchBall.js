@@ -1,40 +1,43 @@
-// src/components/FloatingSearchButton.js
 import React, { useState } from 'react';
-import { Button, Typography } from 'antd';
 import { useSpring, animated } from 'react-spring';
 import { useDrag } from '@use-gesture/react';
-import SearchForm from './SearchForm';
+import { Button, Typography } from 'antd';
+import SearchForm from './SearchForm'; // Importa il tuo modulo di ricerca
 
 const { Title } = Typography;
 
-const FloatingSearchButton = ({ onSearch }) => {
-  const [isOpen, setIsOpen] = useState(false); // Stato per apertura della finestra
-  const [isDragging, setIsDragging] = useState(false); // Stato per identificare il trascinamento
-  const [position, setPosition] = useState({ x: 100, y: 100 });
-  const [{ x, y }, api] = useSpring(() => ({ x: position.x, y: position.y, config: { tension: 500, friction: 30 } }));
+const FloatingSearchBall = ({ onSearch }) => {
+  const [isOpen, setIsOpen] = useState(false); // Stato per apertura del form
+  const [isDragging, setIsDragging] = useState(false); // Stato per il trascinamento
+  const [position, setPosition] = useState({ x: 100, y: 100 }); // Posizione iniziale della palla
 
-  const handleToggle = () => {
-    if (!isDragging) {
-      setIsOpen(!isOpen);
-      console.log('Form toggle, isOpen:', !isOpen);
-    }
-  };
+  // Animazioni con react-spring
+  const [{ x, y }, api] = useSpring(() => ({
+    x: position.x,
+    y: position.y,
+    config: { tension: 500, friction: 30 },
+  }));
 
+  // Gestione trascinamento
   const bind = useDrag(
-    ({ active, movement: [mx, my], event, memo = position }) => {
-      event.stopPropagation();
+    ({ active, movement: [mx, my], memo = position }) => {
       setIsDragging(active);
       if (active) {
         api.start({ x: memo.x + mx, y: memo.y + my });
-        console.log('Dragging, position:', { x: memo.x + mx, y: memo.y + my });
       } else {
         setPosition({ x: memo.x + mx, y: memo.y + my });
-        console.log('Drag end, final position:', { x: memo.x + mx, y: memo.y + my });
       }
       return memo;
     },
     { filterTaps: true }
   );
+
+  // Toggle apertura/chiusura del form
+  const toggleForm = () => {
+    if (!isDragging) {
+      setIsOpen(!isOpen);
+    }
+  };
 
   return (
     <>
@@ -58,22 +61,22 @@ const FloatingSearchButton = ({ onSearch }) => {
           cursor: 'grab',
           userSelect: 'none',
           fontSize: '25px',
-          touchAction: 'none'
+          touchAction: 'none',
         }}
-        onClick={handleToggle}
+        onClick={toggleForm}
       >
         🔍
       </animated.div>
 
-      {/* Finestra di ricerca */}
+      {/* Modulo di ricerca */}
       {isOpen && !isDragging && (
         <animated.div
           style={{
             position: 'fixed',
-            top: position.y + 60,
+            top: position.y + 60, // Posiziona il form sotto la pallina
             left: position.x,
             zIndex: 1000,
-            width: '300px',
+            width: '320px',
             padding: '16px',
             borderRadius: '8px',
             boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
@@ -95,4 +98,4 @@ const FloatingSearchButton = ({ onSearch }) => {
   );
 };
 
-export default FloatingSearchButton;
+export default FloatingSearchBall;

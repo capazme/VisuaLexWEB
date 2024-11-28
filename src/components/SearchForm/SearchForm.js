@@ -1,9 +1,24 @@
 // src/components/SearchForm/SearchForm.js
-import React, { useState } from 'react';
-import { Form, Input, Button, Radio, Spin, Popover, DatePicker, Space } from 'antd';
-import { InlineEdit, InputPicker } from 'rsuite';
-import 'rsuite/dist/rsuite.min.css';
+import React, { useState, useEffect } from 'react';
+import {
+  Form,
+  Input,
+  Button,
+  Select,
+  Spin,
+  Popover,
+  DatePicker,
+  Space,
+  Radio,
+  Typography,
+} from 'antd';
 import moment from 'moment';
+import PropTypes from 'prop-types';
+import { useWatch } from 'antd/es/form/Form';
+import { CalendarOutlined } from '@ant-design/icons';
+
+const { Option } = Select;
+const { Text } = Typography;
 
 // Dati per il tipo di atto
 const actTypeData = [
@@ -27,85 +42,61 @@ const requiresActDetails = [
 ];
 
 const SearchForm = ({ onSearch }) => {
-  const [form] = Form.useForm();
+  const [form] = Form.useForm(); // Creazione dell'istanza del form
   const [loading, setLoading] = useState(false);
   const [versionDate, setVersionDate] = useState(moment());
 
-  const handleVersionChange = (e) => {
-    const newVersion = e.target.value;
-    form.setFieldsValue({ version: newVersion });
-  };
+  // Monitorare il campo 'version'
+  const version = useWatch('version', form);
+
+  // Monitorare il campo 'version_date'
+  const selectedVersionDate = useWatch('version_date', form);
+
+  const [isPopoverVisible, setIsPopoverVisible] = useState(false);
+
+  useEffect(() => {
+    if (version === 'vigente') {
+      setIsPopoverVisible(true);
+    } else {
+      setIsPopoverVisible(false);
+    }
+  }, [version]);
 
   const handleSubmit = async (values) => {
     setLoading(true);
     const data = {
       act_type: values.act_type,
-      act_number: requiresActDetails.includes(values.act_type) ? values.act_number : undefined,
+      act_number: requiresActDetails.includes(values.act_type)
+        ? values.act_number
+        : undefined,
       date: values.date || undefined,
       article: values.article,
       version: values.version,
-      version_date: values.version === 'vigente' ? versionDate.format('YYYY-MM-DD') : undefined,
+      version_date:
+        values.version === 'vigente'
+          ? values.version_date
+            ? values.version_date.format('YYYY-MM-DD')
+            : undefined
+          : undefined,
       annex: values.annex || undefined,
     };
     await onSearch(data);
     setLoading(false);
   };
 
-  // Componente InlineEdit con InputPicker con z-index elevato
-  const ActTypeInlineEdit = () => {
-    const actTypeValue = form.getFieldValue('act_type') || null;
-
-    const handleChange = (value) => form.setFieldsValue({ act_type: value });
-
-    return (
-      <InlineEdit
-        placement="right"
-        trigger="click"
-        defaultValue={actTypeValue}
-        onChange={handleChange}
-        showControls={false}
-        placeholder="Seleziona un tipo di atto"
-        style={{
-          display: 'block',
-          border: '1px solid #d9d9d9',
-          borderRadius: '4px',
-          padding: '4px 11px',
-          minHeight: '32px',
-          lineHeight: '32px',
-          cursor: 'pointer',
-          backgroundColor: '#fff',
-        }}
-      >
-        <InputPicker
-          data={actTypeData}
-          style={{
-            width: '100%',
-            height: '32px',
-            border: 'none',
-            boxShadow: 'none',
-            padding: '0',
-            margin: '0',
-            fontSize: '14px',
-            zIndex: 3000,
-          }}
-          menuStyle={{
-            zIndex: 3000,
-          }}
-          value={actTypeValue}
-          onChange={handleChange}
-          placeholder="Seleziona un tipo di atto"
-        />
-      </InlineEdit>
-    );
+  const handleDateChange = (date) => {
+    setVersionDate(date);
+    form.setFieldsValue({ version_date: date });
+    setIsPopoverVisible(false);
   };
 
-  const VersionDatePopover = () => (
+  const VersionDateContent = (
     <DatePicker
       value={versionDate}
-      onChange={(date) => setVersionDate(date)}
-      defaultValue={moment()}
+      onChange={handleDateChange}
       style={{ width: '100%' }}
       placeholder="Seleziona la data versione"
+      format="YYYY-MM-DD"
     />
   );
 
@@ -117,42 +108,96 @@ const SearchForm = ({ onSearch }) => {
         onFinish={handleSubmit}
         initialValues={{
           version: 'vigente',
+          version_date: moment(),
         }}
-        style={{ maxWidth: 600, margin: '0 auto' }}
+        style={{ maxWidth: 600, margin: '0 auto', marginBottom: '2em' }}
       >
+        {/* Tipo Atto: Select Scrollabile */}
         <Form.Item
           name="act_type"
           label="Tipo Atto"
           rules={[{ required: true, message: 'Seleziona un tipo di atto!' }]}
         >
-          <ActTypeInlineEdit />
+          <Select
+            showSearch
+            placeholder="Seleziona un tipo di atto"
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option.children.toLowerCase().includes(input.toLowerCase())
+            }
+            dropdownStyle={{ maxHeight: 200, overflowY: 'auto' }}
+          >
+            {actTypeData.map((type) => (
+              <Option key={type.value} value={type.value}>
+                {type.label}
+              </Option>
+            ))}
+          </Select>
         </Form.Item>
 
-        <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.act_type !== currentValues.act_type}>
+        {/* Campi Condizionali: Numero Atto e Data Atto */}
+        <Form.Item
+          shouldUpdate={(prevValues, currentValues) =>
+            prevValues.act_type !== currentValues.act_type
+          }
+          noStyle
+        >
           {({ getFieldValue }) =>
             requiresActDetails.includes(getFieldValue('act_type')) ? (
-              <Form.Item name="act_number" label="Numero Atto">
-                <Input placeholder="Numero Atto" />
-              </Form.Item>
+              <>
+                <Form.Item
+                  name="act_number"
+                  label="Numero Atto"
+                  rules={[
+                    { required: true, message: "Inserisci il numero dell'atto!" },
+                    {
+                      pattern: /^[0-9]+$/,
+                      message: 'Il numero atto deve essere numerico!',
+                    },
+                  ]}
+                >
+                  <Input placeholder="Numero Atto" />
+                </Form.Item>
+
+                <Form.Item
+                  name="date"
+                  label="Data Atto (Anno o gg/mm/aaaa)"
+                  rules={[
+                    { required: true, message: "Inserisci la data dell'atto!" },
+                    {
+                      validator: (_, value) => {
+                        if (
+                          !value ||
+                          moment(value, ['YYYY', 'DD/MM/YYYY'], true).isValid()
+                        ) {
+                          return Promise.resolve();
+                        }
+                        return Promise.reject(
+                          new Error('Inserisci una data valida (aaaa o gg/mm/aaaa)!')
+                        );
+                      },
+                    },
+                  ]}
+                >
+                  <Input placeholder="aaaa o gg/mm/aaaa" />
+                </Form.Item>
+              </>
             ) : null
           }
         </Form.Item>
 
-        <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.act_type !== currentValues.act_type}>
-          {({ getFieldValue }) =>
-            requiresActDetails.includes(getFieldValue('act_type')) ? (
-              <Form.Item name="date" label="Data Atto (Anno o gg/mm/aaaa)">
-                <Input placeholder="aaaa o gg/mm/aaaa" />
-              </Form.Item>
-            ) : null
-          }
-        </Form.Item>
-
+        {/* Articolo e Allegato */}
         <Form.Item label="Articolo e Allegato">
           <Space.Compact style={{ width: '100%' }}>
             <Form.Item
               name="article"
-              rules={[{ required: true, message: "Inserisci l'articolo!" }]}
+              rules={[
+                { required: true, message: "Inserisci l'articolo!" },
+                {
+                  pattern: /^(\d+)(-\d+)?(,\s*\d+(-\d+)?)*/,
+                  message: 'Formato articolo non valido (es. 1, 3-5)',
+                },
+              ]}
               noStyle
             >
               <Input style={{ width: 'calc(100% - 5em)' }} placeholder="Es. 1, 3-5" />
@@ -163,20 +208,42 @@ const SearchForm = ({ onSearch }) => {
           </Space.Compact>
         </Form.Item>
 
+        {/* Versione */}
         <Form.Item name="version" label="Versione">
-          <Radio.Group onChange={handleVersionChange}>
+          <Radio.Group>
             <Radio value="originale">Originale</Radio>
-            <Popover
-              content={<VersionDatePopover />}
-              trigger="click"
-              placement="bottom"
-              overlayStyle={{ zIndex: 2000 }}
-            >
-              <Radio value="vigente">Vigente</Radio>
-            </Popover>
+            <Radio value="vigente">
+              <span style={{ display: 'flex', alignItems: 'center' }}>
+                Vigente
+                {/* Icona calendario per aprire il Popover */}
+                <Popover
+                  content={VersionDateContent}
+                  trigger="click"
+                  placement="right"
+                  overlayStyle={{ zIndex: 2000 }}
+                  visible={isPopoverVisible}
+                  onVisibleChange={(visible) => setIsPopoverVisible(visible)}
+                >
+                  <CalendarOutlined style={{ marginLeft: '8px', cursor: 'pointer' }} />
+                </Popover>
+              </span>
+            </Radio>
           </Radio.Group>
         </Form.Item>
 
+        {/* Messaggio per la Data Versione Modificata */}
+        {version === 'vigente' &&
+          selectedVersionDate &&
+          selectedVersionDate.isValid() &&
+          selectedVersionDate.format('YYYY-MM-DD') !== moment().format('YYYY-MM-DD') && (
+            <Form.Item noStyle>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                Data versione modificata: {selectedVersionDate.format('YYYY-MM-DD')}
+              </Text>
+            </Form.Item>
+          )}
+
+        {/* Pulsante Cerca */}
         <Form.Item>
           <Button type="primary" htmlType="submit" block>
             Cerca
@@ -185,6 +252,10 @@ const SearchForm = ({ onSearch }) => {
       </Form>
     </Spin>
   );
+};
+
+SearchForm.propTypes = {
+  onSearch: PropTypes.func.isRequired,
 };
 
 export default SearchForm;

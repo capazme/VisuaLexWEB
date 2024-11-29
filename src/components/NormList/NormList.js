@@ -1,12 +1,12 @@
 // src/components/NormList/NormList.js
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { List, Typography, Card, Row, Col, message } from 'antd';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { DragDropContext } from 'react-beautiful-dnd'; // Ensure proper DragDropContext
+import NormCard from './NormCard/NormCard';
 import ArticleDetail from '../ArticleDetail/ArticleDetail';
+import { Typography, message } from 'antd';
 import { v4 as uuidv4 } from 'uuid';
-import SortableArticle from '../SortableArticle/SortableArticle';
-import { DragDropContext, Droppable } from 'react-beautiful-dnd';
 import './NormList.styles.css';
 
 const { Text } = Typography;
@@ -15,42 +15,30 @@ const NormList = ({ data }) => {
   const [articlesData, setArticlesData] = useState({});
   const [pinnedArticles, setPinnedArticles] = useState([]);
   const [openArticles, setOpenArticles] = useState([]);
-  const [zIndices, setZIndices] = useState({});
+  const [zIndexMap, setZIndexMap] = useState({});
   const [highestZIndex, setHighestZIndex] = useState(1000);
 
-  // Load pinned articles from localStorage
+  // Load pinned articles and z-index map from localStorage
   useEffect(() => {
-    try {
-      const storedPinned = localStorage.getItem('pinnedArticles');
-      if (storedPinned) {
-        setPinnedArticles(JSON.parse(storedPinned));
-      }
-    } catch (error) {
-      console.error('Failed to load pinned articles:', error);
-      message.error('Errore nel caricamento dei preferiti.');
-    }
+    const storedPinned = localStorage.getItem('pinnedArticles');
+    const storedZIndexMap = localStorage.getItem('zIndexMap');
+    if (storedPinned) setPinnedArticles(JSON.parse(storedPinned));
+    if (storedZIndexMap) setZIndexMap(JSON.parse(storedZIndexMap));
   }, []);
 
-  // Save pinned articles to localStorage
+  // Save pinned articles and z-index map to localStorage
   useEffect(() => {
-    try {
-      localStorage.setItem('pinnedArticles', JSON.stringify(pinnedArticles));
-    } catch (error) {
-      console.error('Failed to save pinned articles:', error);
-      message.error('Errore nel salvataggio dei preferiti.');
-    }
-  }, [pinnedArticles]);
+    localStorage.setItem('pinnedArticles', JSON.stringify(pinnedArticles));
+    localStorage.setItem('zIndexMap', JSON.stringify(zIndexMap));
+  }, [pinnedArticles, zIndexMap]);
 
-  // Initialize articlesData
+  // Group articles by norm
   useEffect(() => {
     const groupedArticles = {};
 
     data.forEach((norm) => {
-      // Construct a unique and valid normKey
-      const normType = norm.info.tipo_atto || 'Norma';
-      const normNumber = norm.info.numero_atto || uuidv4();
-      const normDate = norm.info.data || 'NoDate';
-      const normKey = `${normType}-${normNumber}-${normDate}`;
+      const { tipo_atto, numero_atto, data: normDate } = norm.info;
+      const normKey = `${tipo_atto || 'Norma'}-${numero_atto || 'NoNumber'}-${normDate || 'NoDate'}`;
 
       if (!groupedArticles[normKey]) {
         groupedArticles[normKey] = {
@@ -59,198 +47,92 @@ const NormList = ({ data }) => {
         };
       }
 
-      const articlesWithIds = norm.articles.map((article) => {
-        const articleId = article.id ? article.id.toString() : uuidv4();
-        return {
-          ...article,
-          id: articleId,
-          normKey,
-          normInfo: norm.info,
-        };
-      });
+      const articlesWithIds = norm.articles.map((article) => ({
+        ...article,
+        id: article.id || uuidv4(),
+        normKey,
+        normInfo: norm.info,
+      }));
 
-      // Sort articles, placing pinned ones at the top
-      const sortedArticles = [
+      groupedArticles[normKey].articles = [
         ...articlesWithIds.filter((article) => pinnedArticles.includes(article.id)),
         ...articlesWithIds.filter((article) => !pinnedArticles.includes(article.id)),
       ];
-
-      groupedArticles[normKey].articles = sortedArticles;
     });
 
     setArticlesData(groupedArticles);
   }, [data, pinnedArticles]);
 
-  // Drag and drop handler
-  const handleDragEnd = (result) => {
-    const { destination, source } = result;
-
-    if (!destination) {
-      message.warning('Nessuna destinazione valida per il trascinamento.');
-      return;
-    }
-
-    const sourceNormKey = source.droppableId;
-    const destNormKey = destination.droppableId;
-
-    if (
-      sourceNormKey === destNormKey &&
-      source.index === destination.index
-    ) {
-      return; // No change in position
-    }
-
-    const sourceArticles = Array.from(articlesData[sourceNormKey].articles);
-    const destArticles = Array.from(articlesData[destNormKey].articles);
-
-    const [movedArticle] = sourceArticles.splice(source.index, 1);
-
-    // Update the normKey if moved to a different norm
-    if (sourceNormKey !== destNormKey) {
-      movedArticle.normKey = destNormKey;
-    }
-
-    destArticles.splice(destination.index, 0, movedArticle);
-
-    setArticlesData({
-      ...articlesData,
-      [sourceNormKey]: {
-        ...articlesData[sourceNormKey],
-        articles: sourceArticles,
-      },
-      [destNormKey]: {
-        ...articlesData[destNormKey],
-        articles: destArticles,
-      },
-    });
-
-    message.success('Articolo spostato con successo.');
+  // Bring NormCard to the front by updating its z-index
+  const updateZIndex = (normKey) => {
+    setHighestZIndex((prev) => prev + 1);
+    setZIndexMap((prev) => ({
+      ...prev,
+      [normKey]: highestZIndex + 1,
+    }));
   };
 
-  // Article actions
-  const bringToFront = useCallback(
-    (articleId) => {
-      setHighestZIndex((prev) => prev + 1);
-      setZIndices((prevState) => ({
-        ...prevState,
-        [articleId]: highestZIndex + 1,
-      }));
-    },
-    [highestZIndex]
-  );
+  // Handle deleting a norm
+  const handleDeleteNorm = (normKey) => {
+    const updatedData = { ...articlesData };
+    delete updatedData[normKey];
+    setArticlesData(updatedData);
 
-  const handleArticleClick = useCallback(
-    (article) => {
-      setOpenArticles((prevArticles) => {
-        if (prevArticles.find((a) => a.id === article.id)) {
-          bringToFront(article.id);
-          return prevArticles;
-        }
-        bringToFront(article.id);
-        return [...prevArticles, article];
-      });
-    },
-    [bringToFront]
-  );
+    const updatedZIndexMap = { ...zIndexMap };
+    delete updatedZIndexMap[normKey];
+    setZIndexMap(updatedZIndexMap);
 
-  const handleCloseArticle = useCallback((articleId) => {
-    setOpenArticles((prevArticles) =>
-      prevArticles.filter((article) => article.id !== articleId)
-    );
-    setZIndices((prevState) => {
-      const newZIndices = { ...prevState };
-      delete newZIndices[articleId];
-      return newZIndices;
-    });
-  }, []);
-
-  const handleDeleteArticle = (articleId) => {
-    const updatedArticlesData = { ...articlesData };
-    Object.keys(updatedArticlesData).forEach((normKey) => {
-      const normGroup = updatedArticlesData[normKey];
-      normGroup.articles = normGroup.articles.filter(
-        (article) => article.id !== articleId
-      );
-    });
-    setArticlesData(updatedArticlesData);
-    setPinnedArticles((prevPinned) =>
-      prevPinned.filter((id) => id !== articleId)
-    );
-    message.success('Articolo eliminato con successo.');
+    message.success('Norma eliminata con successo.');
   };
 
-  const handlePinArticle = (articleId) => {
-    setPinnedArticles((prevPinned) => {
-      if (prevPinned.includes(articleId)) {
-        message.info('Articolo rimosso dai preferiti.');
-        return prevPinned.filter((id) => id !== articleId);
-      } else {
-        message.success('Articolo aggiunto ai preferiti.');
-        return [articleId, ...prevPinned];
-      }
-    });
+  // Handle open and close article details
+  const handleOpenArticle = (article) => {
+    setOpenArticles((prev) => [...prev, article]);
   };
 
-  if (Object.keys(articlesData).length === 0) {
+  const handleCloseArticle = (articleId) => {
+    setOpenArticles((prev) => prev.filter((a) => a.id !== articleId));
+  };
+
+  // Handle drag and drop (you can customize this logic as needed)
+  const onDragEnd = () => {
+    // Placeholder function for future drag-and-drop interactions
+  };
+
+  if (!Object.keys(articlesData).length) {
     return <Text type="secondary">Nessun risultato da visualizzare.</Text>;
   }
 
   return (
-    <>
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <Row gutter={[16, 16]} className="norm-grid">
-          {Object.keys(articlesData).map((normKey) => {
-            const normGroup = articlesData[normKey];
-            const normInfo = normGroup.normInfo;
-            const normTitle = `${normInfo.tipo_atto} ${
-              normInfo.numero_atto ? normInfo.numero_atto : ''
-            } ${normInfo.data ? `(${normInfo.data})` : ''}`;
-
-            return (
-              <Col key={normKey} xs={24} sm={12} md={8}>
-                <Card title={normTitle} className="norm-card">
-                  <Droppable droppableId={normKey} type="ARTICLE">
-                    {(provided, snapshot) => (
-                      <List
-                        itemLayout="horizontal"
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        className={`article-list ${
-                          snapshot.isDraggingOver ? 'dragging-over' : ''
-                        }`}
-                      >
-                        {normGroup.articles.map((article, index) => (
-                          <SortableArticle
-                            key={article.id}
-                            article={article}
-                            index={index}
-                            onArticleClick={handleArticleClick}
-                            onDeleteArticle={handleDeleteArticle}
-                            onPinArticle={handlePinArticle}
-                            isPinned={pinnedArticles.includes(article.id)}
-                          />
-                        ))}
-                        {provided.placeholder}
-                      </List>
-                    )}
-                  </Droppable>
-                </Card>
-              </Col>
-            );
-          })}
-        </Row>
-      </DragDropContext>
+    <DragDropContext onDragEnd={onDragEnd}>
+      {Object.entries(articlesData).map(([normKey, normGroup]) => (
+        <NormCard
+          key={normKey}
+          normKey={normKey}
+          normGroup={normGroup}
+          pinnedArticles={pinnedArticles}
+          onOpenArticle={handleOpenArticle}
+          setPinnedArticles={setPinnedArticles}
+          position={zIndexMap[normKey]}
+          onUpdatePosition={(normKey, position) =>
+            setZIndexMap((prev) => ({ ...prev, [normKey]: position }))
+          }
+          highestZIndex={highestZIndex}
+          setHighestZIndex={setHighestZIndex}
+          currentZIndex={zIndexMap[normKey] || 0}
+          updateZIndex={updateZIndex}
+          onDeleteNorm={handleDeleteNorm}
+        />
+      ))}
 
       {openArticles.map((article) => (
         <ArticleDetail
           key={article.id}
           article={article}
           onClose={() => handleCloseArticle(article.id)}
-          zIndex={zIndices[article.id] || 1000}
-          bringToFront={() => bringToFront(article.id)}
         />
       ))}
-    </>
+    </DragDropContext>
   );
 };
 

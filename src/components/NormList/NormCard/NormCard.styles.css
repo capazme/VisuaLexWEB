@@ -1,0 +1,154 @@
+/* NormCard Global Styles */
+.norm-card {
+  border: 1px solid #d9d9d9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  background-color: #ffffff;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.norm-card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
+}
+
+/* Article List Styles */
+.article-list {
+  padding: 0 12px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.article-list.dragging-over {
+  background-color: #f0f9ff;
+  border: 2px dashed #1890ff;
+  border-radius: 6px;
+}
+
+/* Empty State Styles */
+.empty-articles {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 14px;
+  color: #8c8c8c;
+  font-style: italic;
+}
+
+/* Card Header */
+.ant-card-head {
+  background-color: #fafafa;
+  border-bottom: 1px solid #e8e8e8;
+  font-weight: bold;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.ant-card-head-title {
+  font-size: 16px;
+  color: #595959;
+}
+
+/* Card Body */
+.ant-card-body {
+  padding: 0;
+}
+
+/* RND Drag and Resize Styles */
+.rnd-wrapper {
+  position: absolute;
+  z-index: 1000;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.rnd-wrapper:focus-within {
+  box-shadow: 0 0 0 2px #1890ff;
+  outline: none;
+}
+
+/* Smooth resizing and dragging */
+.rnd-wrapper > .react-resizable-handle {
+  background-color: #1890ff;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.rnd-wrapper:hover .react-resizable-handle {
+  background-color: #40a9ff;
+}
+
+/* Scrollbar Customization */
+.article-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.article-list::-webkit-scrollbar-thumb {
+  background-color: #d9d9d9;
+  border-radius: 4px;
+}
+
+.article-list::-webkit-scrollbar-thumb:hover {
+  background-color: #bfbfbf;
+}
+
+.article-list::-webkit-scrollbar-track {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+/* Dragging Effects */
+.dragging-over {
+  animation: pulse-border 1.5s infinite;
+}
+
+@keyframes pulse-border {
+  0% {
+    border-color: #40a9ff;
+  }
+  50% {
+    border-color: #1890ff;
+  }
+  100% {
+    border-color: #40a9ff;
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .norm-card {
+    font-size: 14px;
+  }
+
+  .ant-card-head-title {
+    font-size: 14px;
+  }
+
+  .rnd-wrapper {
+    width: 90% !important;
+    height: auto !important;
+    left: 5% !important;
+    top: 10% !important;
+  }
+}
+
+.norm-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.norm-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.norm-card-actions button {
+  color: #595959;
+}
+
+.norm-card-actions button:hover {
+  color: #1890ff;
+}

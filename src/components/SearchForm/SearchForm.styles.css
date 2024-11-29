@@ -1,0 +1,138 @@
+/* General Form Styling */
+.ant-form {
+    background-color: #ffffff; /* White background for better readability */
+    border: 1px solid #d9d9d9; /* Light gray border for subtle separation */
+    border-radius: 8px; /* Rounded corners */
+    padding: 20px; /* Add some spacing inside the form */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+  }
+  
+  /* Form Header (Optional: You can add a header inside the form) */
+  .form-header {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 16px;
+    color: #333333; /* Dark gray for text readability */
+  }
+  
+  /* Input Fields */
+  .ant-input {
+    height: 40px; /* Slightly taller inputs for better usability */
+    border-radius: 4px; /* Consistent rounded corners */
+    border: 1px solid #d9d9d9;
+  }
+  
+  .ant-input:focus,
+  .ant-input:hover {
+    border-color: #1890ff; /* Ant Design's primary blue color */
+    box-shadow: 0 0 5px rgba(24, 144, 255, 0.4); /* Blue glow on hover/focus */
+  }
+  
+  /* Select Dropdown */
+  .ant-select {
+    height: 40px;
+    border-radius: 4px;
+  }
+  
+  .ant-select-selector {
+    height: 40px !important; /* Match the input height */
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+  }
+  
+  .ant-select-selector:focus,
+  .ant-select-selector:hover {
+    border-color: #1890ff;
+    box-shadow: 0 0 5px rgba(24, 144, 255, 0.4);
+  }
+  
+  /* Date Picker */
+  .ant-picker {
+    height: 40px;
+    border-radius: 4px;
+    width: 100%;
+  }
+  
+  .ant-picker:hover,
+  .ant-picker-focused {
+    border-color: #1890ff;
+    box-shadow: 0 0 5px rgba(24, 144, 255, 0.4);
+  }
+  
+  /* Popover */
+  .ant-popover-inner {
+    border-radius: 8px; /* Rounded corners for popovers */
+  }
+  
+  /* Radio Buttons */
+  .ant-radio-wrapper {
+    font-size: 14px;
+    color: #333333;
+  }
+  
+  .ant-radio:hover .ant-radio-inner {
+    border-color: #1890ff;
+  }
+  
+  .ant-radio-checked .ant-radio-inner {
+    border-color: #1890ff;
+    background-color: #1890ff;
+  }
+  
+  /* Button Styling */
+  .ant-btn-primary {
+    background-color: #1890ff; /* Primary blue color */
+    border-color: #1890ff;
+    height: 40px;
+    font-size: 16px;
+    font-weight: 500;
+    border-radius: 4px;
+  }
+  
+  .ant-btn-primary:hover {
+    background-color: #40a9ff; /* Slightly lighter blue on hover */
+    border-color: #40a9ff;
+  }
+  
+  /* Typography (Helper Text) */
+  .ant-typography-secondary {
+    color: #8c8c8c; /* Subtle gray for secondary text */
+    font-size: 12px; /* Small font for helper text */
+  }
+  
+  /* Space Compact Styling */
+  .ant-space-compact {
+    display: flex;
+    gap: 8px; /* Add spacing between inputs */
+  }
+  
+  .ant-space-compact .ant-input,
+  .ant-space-compact .ant-input:hover {
+    flex: 1; /* Ensure equal width */
+  }
+  
+  /* Form Layout Adjustments */
+  .ant-form-item {
+    margin-bottom: 16px; /* Add space between form items */
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .ant-form {
+      padding: 16px;
+      border-radius: 6px;
+    }
+  
+    .ant-btn-primary {
+      height: 36px;
+      font-size: 14px;
+    }
+  
+    .ant-input,
+    .ant-select-selector,
+    .ant-picker {
+      height: 36px;
+    }
+  }
+  

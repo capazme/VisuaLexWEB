@@ -1,0 +1,89 @@
+/* Global Styles for FloatingSearchBall Component */
+
+/* Floating Ball Styles */
+.floating-search-ball {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #1890ff; /* Primary Color */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    font-size: 25px;
+    touch-action: none; /* Improves mobile dragging experience */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow for elevation */
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  /* Dragging State */
+  .floating-search-ball.grabbing {
+    cursor: grabbing;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* More pronounced shadow when dragging */
+  }
+  
+  /* Search Form Styles */
+  .floating-search-form {
+    position: fixed;
+    z-index: 1000;
+    width: 320px;
+    max-height: calc(100vh - 20px); /* Ensure it doesn't overflow the viewport */
+    background-color: #ffffff;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    overflow-y: auto; /* Handle long content gracefully */
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+  
+  /* Header of the Search Form */
+  .search-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  
+  .search-form-header h5 {
+    margin: 0;
+    font-size: 1.25rem; /* Matches Ant Design's Title level 5 */
+    font-weight: 600;
+    color: #333; /* Neutral text color */
+  }
+  
+  .search-form-header button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: #999; /* Subtle close button color */
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  
+  .search-form-header button:hover {
+    color: #1890ff; /* Match the primary theme color on hover */
+  }
+  
+  /* Animations */
+  .floating-search-ball,
+  .floating-search-form {
+    animation: fade-in 0.3s ease;
+  }
+  
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  

@@ -1,137 +1,124 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSpring, animated } from 'react-spring';
 import { useDrag } from '@use-gesture/react';
 import { Button, Typography } from 'antd';
-import SearchForm from '../SearchForm/SearchForm'; // Importa il tuo modulo di ricerca
+import SearchForm from '../SearchForm/SearchForm';
+import './FloatingSearchBall.styles.css'; // Centralized styles
 
 const { Title } = Typography;
 
-// Definisci clamp fuori dal componente
+const BALL_SIZE = 50; // px
+const FORM_WIDTH = 320; // px
+const FORM_HEIGHT = 400; // px
+
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
-// Dimensioni della pallina fluttuante e del form
-const BALL_SIZE = 50; // in px
-const FORM_WIDTH = 320; // in px
-const FORM_HEIGHT = 400; // approssimazione, potrebbe variare
-
 const FloatingSearchBall = ({ onSearch }) => {
-  const [isOpen, setIsOpen] = useState(false); // Stato per apertura del form
-  const [isDragging, setIsDragging] = useState(false); // Stato per il trascinamento
+  const [isOpen, setIsOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
-  }); // Dimensioni della finestra
+  });
 
   const ballRef = useRef(null);
   const formRef = useRef(null);
 
-  // Recupera la posizione salvata da localStorage o usa valori predefiniti
+  // Load initial position from localStorage or default
   const getInitialPosition = () => {
-    const savedPosition = JSON.parse(localStorage.getItem('floatingBallPosition'));
-    if (savedPosition) {
-      // Assicurati che la posizione salvata sia entro i limiti della finestra attuale
-      const maxX = window.innerWidth - BALL_SIZE;
-      const maxY = window.innerHeight - BALL_SIZE;
-      return {
-        x: clamp(savedPosition.x, 0, maxX),
-        y: clamp(savedPosition.y, 0, maxY),
-      };
-    }
-    return { x: 100, y: 100 };
+    const savedPosition = JSON.parse(localStorage.getItem('floatingBallPosition')) || { x: 100, y: 100 };
+    return {
+      x: clamp(savedPosition.x, 0, window.innerWidth - BALL_SIZE),
+      y: clamp(savedPosition.y, 0, window.innerHeight - BALL_SIZE),
+    };
   };
 
   const [position, setPosition] = useState(getInitialPosition);
 
-  // Funzione per aggiornare le dimensioni della finestra
+  const updatePositionInStorage = (newPosition) => {
+    localStorage.setItem('floatingBallPosition', JSON.stringify(newPosition));
+  };
+
+  // Update window size on resize
   const handleResize = useCallback(() => {
-    setWindowSize({
-      width: window.innerWidth,
-      height: window.innerHeight,
-    });
-    // Verifica e correggi la posizione se necessario
+    setWindowSize({ width: window.innerWidth, height: window.innerHeight });
     setPosition((prev) => {
-      const maxX = window.innerWidth - BALL_SIZE;
-      const maxY = window.innerHeight - BALL_SIZE;
-      const newX = clamp(prev.x, 0, maxX);
-      const newY = clamp(prev.y, 0, maxY);
-      const updated = { x: newX, y: newY };
-      localStorage.setItem('floatingBallPosition', JSON.stringify(updated));
-      return updated;
+      const clampedPosition = {
+        x: clamp(prev.x, 0, window.innerWidth - BALL_SIZE),
+        y: clamp(prev.y, 0, window.innerHeight - BALL_SIZE),
+      };
+      updatePositionInStorage(clampedPosition);
+      return clampedPosition;
     });
-  }, []); // Nessuna dipendenza necessaria
+  }, []);
 
   useEffect(() => {
     window.addEventListener('resize', handleResize);
-    // Pulizia dell'evento
     return () => window.removeEventListener('resize', handleResize);
   }, [handleResize]);
 
-  // Calcola i limiti di trascinamento per la pallina
-  const getBounds = () => {
-    const maxX = windowSize.width - BALL_SIZE;
-    const maxY = windowSize.height - BALL_SIZE;
-    return { minX: 0, minY: 0, maxX, maxY };
-  };
+  // Calculate bounds for dragging
+  const bounds = useMemo(() => ({
+    minX: 0,
+    minY: 0,
+    maxX: windowSize.width - BALL_SIZE,
+    maxY: windowSize.height - BALL_SIZE,
+  }), [windowSize]);
 
-  // Animazioni con react-spring
+  // Animations with react-spring
   const [{ x, y }, api] = useSpring(() => ({
     x: position.x,
     y: position.y,
     config: { tension: 500, friction: 30 },
   }));
 
-  // Gestione trascinamento
+  // Drag handler
   const bind = useDrag(
     ({ active, movement: [mx, my], memo = position }) => {
       setIsDragging(active);
       if (active) {
-        const newX = clamp(memo.x + mx, getBounds().minX, getBounds().maxX);
-        const newY = clamp(memo.y + my, getBounds().minY, getBounds().maxY);
-        api.start({ x: newX, y: newY });
-      } else {
-        const finalX = clamp(memo.x + mx, getBounds().minX, getBounds().maxX);
-        const finalY = clamp(memo.y + my, getBounds().minY, getBounds().maxY);
-        setPosition({ x: finalX, y: finalY });
-        localStorage.setItem('floatingBallPosition', JSON.stringify({ x: finalX, y: finalY }));
+        const newPosition = {
+          x: clamp(memo.x + mx, bounds.minX, bounds.maxX),
+          y: clamp(memo.y + my, bounds.minY, bounds.maxY),
+        };
+        api.start(newPosition);
+        return memo;
       }
-      return memo;
+      const finalPosition = {
+        x: clamp(memo.x + mx, bounds.minX, bounds.maxX),
+        y: clamp(memo.y + my, bounds.minY, bounds.maxY),
+      };
+      setPosition(finalPosition);
+      updatePositionInStorage(finalPosition);
+      return finalPosition;
     },
     { filterTaps: true }
   );
 
-  // Toggle apertura/chiusura del form
   const toggleForm = () => {
-    if (!isDragging) {
-      setIsOpen(!isOpen);
-    }
+    if (!isDragging) setIsOpen((prev) => !prev);
   };
 
-  // Calcola la posizione del form per evitare che esca dai bordi
-  const getFormPosition = () => {
+  const getFormPosition = useMemo(() => {
     let formX = position.x;
-    let formY = position.y + BALL_SIZE + 10; // 10px di margine
+    let formY = position.y + BALL_SIZE + 10;
 
-    // Verifica se il form esce dai bordi orizzontali
     if (formX + FORM_WIDTH > windowSize.width) {
-      formX = windowSize.width - FORM_WIDTH - 10; // 10px di padding
+      formX = windowSize.width - FORM_WIDTH - 10;
     }
 
-    // Verifica se il form esce dai bordi verticali
     if (formY + FORM_HEIGHT > windowSize.height) {
-      formY = position.y - FORM_HEIGHT - 10; // Posiziona sopra la pallina
+      formY = position.y - FORM_HEIGHT - 10;
       if (formY < 0) {
-        formY = windowSize.height - FORM_HEIGHT - 10; // Ultimo tentativo
+        formY = windowSize.height - FORM_HEIGHT - 10;
       }
     }
 
     return { formX, formY };
-  };
-
-  const { formX, formY } = isOpen ? getFormPosition() : { formX: 0, formY: 0 };
+  }, [position, windowSize]);
 
   return (
     <>
-      {/* Pallina fluttuante */}
       <animated.div
         {...bind()}
         ref={ballRef}
@@ -142,55 +129,53 @@ const FloatingSearchBall = ({ onSearch }) => {
           x,
           y,
           zIndex: 1000,
-          width: `${BALL_SIZE}px`,
-          height: `${BALL_SIZE}px`,
+          width: BALL_SIZE,
+          height: BALL_SIZE,
           borderRadius: '50%',
           backgroundColor: '#1890ff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          cursor: isDragging ? 'grabbing' : 'grab',
+          cursor: isDragging ? 'grabbing' : 'pointer',
           userSelect: 'none',
           fontSize: '25px',
           touchAction: 'none',
           boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
         }}
         onClick={toggleForm}
-        aria-label="Apri form di ricerca"
+        aria-label="Toggle Search Form"
+        role="button"
+        tabIndex={0}
       >
         🔍
       </animated.div>
 
-      {/* Modulo di ricerca */}
       {isOpen && !isDragging && (
         <animated.div
           ref={formRef}
           style={{
             position: 'fixed',
-            top: formY,
-            left: formX,
+            top: getFormPosition.formY,
+            left: getFormPosition.formX,
             zIndex: 1000,
-            width: `${FORM_WIDTH}px`,
+            width: FORM_WIDTH,
             padding: '16px',
             borderRadius: '8px',
             boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
             backgroundColor: '#fff',
-            maxHeight: windowSize.height - formY - 20, // 20px di padding inferiore
+            maxHeight: windowSize.height - getFormPosition.formY - 20,
             overflowY: 'auto',
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '16px',
-            }}
-          >
+          <div className="search-form-header">
             <Title level={5} style={{ margin: 0 }}>
               Ricerca Norme
             </Title>
-            <Button type="text" onClick={() => setIsOpen(false)} aria-label="Chiudi form di ricerca">
+            <Button
+              type="text"
+              onClick={() => setIsOpen(false)}
+              aria-label="Close Search Form"
+            >
               ✕
             </Button>
           </div>

@@ -1,18 +1,21 @@
 /* src/components/NormList/NormList.styles.css */
-.ant-collapse-header {
-    font-weight: bold;
-    font-size: 16px;
-  }
-  
-  .ant-list-item {
-    transition: background-color 0.3s;
-  }
-  
-  .ant-list-item:hover {
-    background-color: #f0f0f0;
-  }
-  
-  .ant-badge-count {
-    margin-left: 8px;
-  }
-  
+
+.norm-grid {
+  padding: 16px;
+}
+
+.norm-card {
+  height: 100%;
+}
+
+.article-list {
+  max-height: 400px;
+  overflow-y: auto;
+  background-color: #fafafa;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.article-list.dragging-over {
+  background-color: #e6f7ff;
+}

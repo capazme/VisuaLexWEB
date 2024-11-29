@@ -1,0 +1,28 @@
+/* src/components/SortableArticle/SortableArticle.css */
+
+.sortable-article {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    padding: 8px;
+    transition: background-color 0.2s ease;
+  }
+  
+  .sortable-article:hover {
+    background-color: #f5f5f5;
+  }
+  
+  .article-title {
+    display: flex;
+    align-items: center;
+  }
+  
+  .article-actions {
+    margin-left: auto;
+  }
+  
+  .article-actions button {
+    margin-left: 8px;
+  }
+  

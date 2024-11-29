@@ -1,7 +1,7 @@
 // src/components/NormList/NormList.js
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { List, Typography, Collapse } from 'antd';
+import { List, Typography, Card, Row, Col, message } from 'antd';
 import PropTypes from 'prop-types';
 import ArticleDetail from '../ArticleDetail/ArticleDetail';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,9 +10,8 @@ import { DragDropContext, Droppable } from 'react-beautiful-dnd';
 import './NormList.styles.css';
 
 const { Text } = Typography;
-const { Panel } = Collapse;
 
-const NormList = React.memo(({ data }) => {
+const NormList = ({ data }) => {
   const [articlesData, setArticlesData] = useState({});
   const [pinnedArticles, setPinnedArticles] = useState([]);
   const [openArticles, setOpenArticles] = useState([]);
@@ -21,15 +20,25 @@ const NormList = React.memo(({ data }) => {
 
   // Load pinned articles from localStorage
   useEffect(() => {
-    const storedPinned = localStorage.getItem('pinnedArticles');
-    if (storedPinned) {
-      setPinnedArticles(JSON.parse(storedPinned));
+    try {
+      const storedPinned = localStorage.getItem('pinnedArticles');
+      if (storedPinned) {
+        setPinnedArticles(JSON.parse(storedPinned));
+      }
+    } catch (error) {
+      console.error('Failed to load pinned articles:', error);
+      message.error('Errore nel caricamento dei preferiti.');
     }
   }, []);
 
   // Save pinned articles to localStorage
   useEffect(() => {
-    localStorage.setItem('pinnedArticles', JSON.stringify(pinnedArticles));
+    try {
+      localStorage.setItem('pinnedArticles', JSON.stringify(pinnedArticles));
+    } catch (error) {
+      console.error('Failed to save pinned articles:', error);
+      message.error('Errore nel salvataggio dei preferiti.');
+    }
   }, [pinnedArticles]);
 
   // Initialize articlesData
@@ -37,15 +46,28 @@ const NormList = React.memo(({ data }) => {
     const groupedArticles = {};
 
     data.forEach((norm) => {
-      const normKey = norm.key || uuidv4();
-      const normInfo = norm.info;
+      // Construct a unique and valid normKey
+      const normType = norm.info.tipo_atto || 'Norma';
+      const normNumber = norm.info.numero_atto || uuidv4();
+      const normDate = norm.info.data || 'NoDate';
+      const normKey = `${normType}-${normNumber}-${normDate}`;
 
-      const articlesWithIds = norm.articles.map((article) => ({
-        ...article,
-        id: article.id ? article.id.toString() : uuidv4(),
-        normKey,
-        normInfo,
-      }));
+      if (!groupedArticles[normKey]) {
+        groupedArticles[normKey] = {
+          normInfo: norm.info,
+          articles: [],
+        };
+      }
+
+      const articlesWithIds = norm.articles.map((article) => {
+        const articleId = article.id ? article.id.toString() : uuidv4();
+        return {
+          ...article,
+          id: articleId,
+          normKey,
+          normInfo: norm.info,
+        };
+      });
 
       // Sort articles, placing pinned ones at the top
       const sortedArticles = [
@@ -53,10 +75,7 @@ const NormList = React.memo(({ data }) => {
         ...articlesWithIds.filter((article) => !pinnedArticles.includes(article.id)),
       ];
 
-      groupedArticles[normKey] = {
-        normInfo,
-        articles: sortedArticles,
-      };
+      groupedArticles[normKey].articles = sortedArticles;
     });
 
     setArticlesData(groupedArticles);
@@ -64,22 +83,34 @@ const NormList = React.memo(({ data }) => {
 
   // Drag and drop handler
   const handleDragEnd = (result) => {
-    if (!result.destination) return;
+    const { destination, source } = result;
 
-    const sourceNormKey = result.source.droppableId;
-    const destNormKey = result.destination.droppableId;
+    if (!destination) {
+      message.warning('Nessuna destinazione valida per il trascinamento.');
+      return;
+    }
+
+    const sourceNormKey = source.droppableId;
+    const destNormKey = destination.droppableId;
+
+    if (
+      sourceNormKey === destNormKey &&
+      source.index === destination.index
+    ) {
+      return; // No change in position
+    }
 
     const sourceArticles = Array.from(articlesData[sourceNormKey].articles);
     const destArticles = Array.from(articlesData[destNormKey].articles);
 
-    const [movedArticle] = sourceArticles.splice(result.source.index, 1);
+    const [movedArticle] = sourceArticles.splice(source.index, 1);
 
     // Update the normKey if moved to a different norm
     if (sourceNormKey !== destNormKey) {
       movedArticle.normKey = destNormKey;
     }
 
-    destArticles.splice(result.destination.index, 0, movedArticle);
+    destArticles.splice(destination.index, 0, movedArticle);
 
     setArticlesData({
       ...articlesData,
@@ -92,6 +123,8 @@ const NormList = React.memo(({ data }) => {
         articles: destArticles,
       },
     });
+
+    message.success('Articolo spostato con successo.');
   };
 
   // Article actions
@@ -143,13 +176,16 @@ const NormList = React.memo(({ data }) => {
     setPinnedArticles((prevPinned) =>
       prevPinned.filter((id) => id !== articleId)
     );
+    message.success('Articolo eliminato con successo.');
   };
 
   const handlePinArticle = (articleId) => {
     setPinnedArticles((prevPinned) => {
       if (prevPinned.includes(articleId)) {
+        message.info('Articolo rimosso dai preferiti.');
         return prevPinned.filter((id) => id !== articleId);
       } else {
+        message.success('Articolo aggiunto ai preferiti.');
         return [articleId, ...prevPinned];
       }
     });
@@ -162,42 +198,47 @@ const NormList = React.memo(({ data }) => {
   return (
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
-        <Collapse accordion>
+        <Row gutter={[16, 16]} className="norm-grid">
           {Object.keys(articlesData).map((normKey) => {
             const normGroup = articlesData[normKey];
             const normInfo = normGroup.normInfo;
-            const panelHeader = `${normInfo.tipo_atto} ${
+            const normTitle = `${normInfo.tipo_atto} ${
               normInfo.numero_atto ? normInfo.numero_atto : ''
             } ${normInfo.data ? `(${normInfo.data})` : ''}`;
 
             return (
-              <Panel header={panelHeader} key={normKey}>
-                <Droppable droppableId={normKey}>
-                  {(provided) => (
-                    <List
-                      itemLayout="horizontal"
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                    >
-                      {normGroup.articles.map((article, index) => (
-                        <SortableArticle
-                          key={article.id}
-                          article={article}
-                          index={index}
-                          onArticleClick={handleArticleClick}
-                          onDeleteArticle={handleDeleteArticle}
-                          onPinArticle={handlePinArticle}
-                          isPinned={pinnedArticles.includes(article.id)}
-                        />
-                      ))}
-                      {provided.placeholder}
-                    </List>
-                  )}
-                </Droppable>
-              </Panel>
+              <Col key={normKey} xs={24} sm={12} md={8}>
+                <Card title={normTitle} className="norm-card">
+                  <Droppable droppableId={normKey} type="ARTICLE">
+                    {(provided, snapshot) => (
+                      <List
+                        itemLayout="horizontal"
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className={`article-list ${
+                          snapshot.isDraggingOver ? 'dragging-over' : ''
+                        }`}
+                      >
+                        {normGroup.articles.map((article, index) => (
+                          <SortableArticle
+                            key={article.id}
+                            article={article}
+                            index={index}
+                            onArticleClick={handleArticleClick}
+                            onDeleteArticle={handleDeleteArticle}
+                            onPinArticle={handlePinArticle}
+                            isPinned={pinnedArticles.includes(article.id)}
+                          />
+                        ))}
+                        {provided.placeholder}
+                      </List>
+                    )}
+                  </Droppable>
+                </Card>
+              </Col>
             );
           })}
-        </Collapse>
+        </Row>
       </DragDropContext>
 
       {openArticles.map((article) => (
@@ -211,12 +252,12 @@ const NormList = React.memo(({ data }) => {
       ))}
     </>
   );
-});
+};
 
 NormList.propTypes = {
   data: PropTypes.arrayOf(
     PropTypes.shape({
-      key: PropTypes.string,
+      key: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
       info: PropTypes.shape({
         tipo_atto: PropTypes.string.isRequired,
         numero_atto: PropTypes.string,
@@ -233,8 +274,8 @@ NormList.propTypes = {
           }).isRequired,
           article_text: PropTypes.string,
           brocardi_info: PropTypes.shape({
-            position: PropTypes.string,
-            link: PropTypes.string,
+            Spiegazione: PropTypes.string,
+            Massime: PropTypes.arrayOf(PropTypes.string),
           }),
         })
       ).isRequired,
@@ -242,4 +283,4 @@ NormList.propTypes = {
   ).isRequired,
 };
 
-export default NormList;
+export default React.memo(NormList);

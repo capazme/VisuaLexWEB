@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { Collapse, List, Typography, Badge } from 'antd';
 import PropTypes from 'prop-types';
-import ArticleDetail from '../ArticleDetail/ArticleDetail'; // Importa il componente ArticleDetail
-import './NormList.styles.css'; // Importa il CSS opzionale
+import ArticleDetail from '../ArticleDetail/ArticleDetail';
+import './NormList.styles.css';
 
 const { Text } = Typography;
 
@@ -30,13 +30,24 @@ const groupArticlesByNorm = (data) => {
 
 const NormList = React.memo(({ data }) => {
   const [openArticles, setOpenArticles] = useState([]);
+  const [zIndices, setZIndices] = useState({});
+  const [highestZIndex, setHighestZIndex] = useState(1000);
+
+  const bringToFront = (articleId) => {
+    setHighestZIndex((prev) => prev + 1);
+    setZIndices((prevState) => ({
+      ...prevState,
+      [articleId]: highestZIndex + 1,
+    }));
+  };
 
   const handleArticleClick = (article) => {
     setOpenArticles((prevArticles) => {
-      // Evita duplicati
       if (prevArticles.find((a) => a.id === article.id)) {
+        bringToFront(article.id);
         return prevArticles;
       }
+      bringToFront(article.id);
       return [...prevArticles, article];
     });
   };
@@ -45,6 +56,11 @@ const NormList = React.memo(({ data }) => {
     setOpenArticles((prevArticles) =>
       prevArticles.filter((article) => article.id !== articleId)
     );
+    setZIndices((prevState) => {
+      const newZIndices = { ...prevState };
+      delete newZIndices[articleId];
+      return newZIndices;
+    });
   };
 
   if (data.length === 0) {
@@ -68,7 +84,6 @@ const NormList = React.memo(({ data }) => {
     }
 
     const articlesList = norm.articles.map((article, idx) => {
-      // Assegna un ID univoco all'articolo se non esiste
       const articleWithId = {
         ...article,
         id: article.id || `${key}-article-${idx}`,
@@ -135,12 +150,13 @@ const NormList = React.memo(({ data }) => {
   return (
     <>
       <Collapse accordion items={collapseItems} />
-      {/* Renderizza le finestre degli articoli aperti */}
       {openArticles.map((article) => (
         <ArticleDetail
           key={article.id}
           article={article}
           onClose={() => handleCloseArticle(article.id)}
+          zIndex={zIndices[article.id] || 1000}
+          bringToFront={() => bringToFront(article.id)}
         />
       ))}
     </>
@@ -158,7 +174,7 @@ NormList.propTypes = {
       }).isRequired,
       articles: PropTypes.arrayOf(
         PropTypes.shape({
-          id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+          id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
           norma_data: PropTypes.shape({
             numero_articolo: PropTypes.string.isRequired,
             versione: PropTypes.string.isRequired,
@@ -169,6 +185,7 @@ NormList.propTypes = {
           url: PropTypes.string,
           brocardi_info: PropTypes.shape({
             position: PropTypes.string,
+            link: PropTypes.string,
           }),
         })
       ).isRequired,

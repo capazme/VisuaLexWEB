@@ -1,21 +1,17 @@
-// Importazioni
+// ArticleDetail.js
 import React, { useState, useEffect } from 'react';
 import { Typography, Button, Collapse, message, Card } from 'antd';
-import {
-  MinusOutlined,
-  ExpandOutlined,
-  CloseOutlined,
-  CopyOutlined,
-} from '@ant-design/icons';
+import { MinusOutlined, ExpandOutlined, CloseOutlined, CopyOutlined } from '@ant-design/icons';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { Rnd } from 'react-rnd';
 import PropTypes from 'prop-types';
+import classNames from 'classnames';
 import './ArticleDetail.styles.css';
 
 const { Title } = Typography;
 
-const ArticleDetail = ({ article, onClose }) => {
+const ArticleDetail = ({ article, onClose, zIndex, bringToFront }) => {
   const [editorData, setEditorData] = useState('Caricamento...');
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -23,6 +19,7 @@ const ArticleDetail = ({ article, onClose }) => {
     brocardi: [],
     massime: [],
     spiegazione: false,
+    position: false,
   });
 
   useEffect(() => {
@@ -47,7 +44,7 @@ const ArticleDetail = ({ article, onClose }) => {
       let plainText = editorData
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '');
-      
+
       let additionalText = '';
 
       if (selectedItems.brocardi.length > 0) {
@@ -66,6 +63,10 @@ const ArticleDetail = ({ article, onClose }) => {
 
       if (selectedItems.spiegazione) {
         additionalText += '\n\nSpiegazione:\n' + article.brocardi_info.Spiegazione;
+      }
+
+      if (selectedItems.position) {
+        additionalText += '\n\nPosizione:\n' + article.brocardi_info.position;
       }
 
       const textToCopy = plainText + additionalText;
@@ -98,25 +99,7 @@ const ArticleDetail = ({ article, onClose }) => {
 
   if (isMinimized) {
     return (
-      <div
-        className="article-detail-minimized"
-        onClick={handleExpand}
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          width: '50px',
-          height: '50px',
-          backgroundColor: '#1890ff',
-          borderRadius: '50%',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          zIndex: 1000,
-        }}
-      >
+      <div className="minimized-window" onClick={handleExpand}>
         <ExpandOutlined style={{ fontSize: '24px' }} />
       </div>
     );
@@ -130,19 +113,17 @@ const ArticleDetail = ({ article, onClose }) => {
       key: 'brocardi',
       label: 'Brocardi',
       children: (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+        <div className="brocardi-container">
           {article.brocardi_info.Brocardi.map((item, index) => (
             <Card
               key={index}
               hoverable
-              style={{
-                width: '100%',
-                borderColor: selectedItems.brocardi.includes(index) ? '#1890ff' : '#f0f0f0',
-                backgroundColor: selectedItems.brocardi.includes(index) ? '#e6f7ff' : '#fff',
-              }}
+              className={classNames('selectable-card', {
+                'card-selected': selectedItems.brocardi.includes(index),
+              })}
               onClick={() => handleBrocardiSelection(index)}
             >
-              <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{item}</pre>
+              <pre className="card-content">{item}</pre>
             </Card>
           ))}
         </div>
@@ -159,24 +140,17 @@ const ArticleDetail = ({ article, onClose }) => {
       key: 'massime',
       label: 'Massime',
       children: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="massime-container">
           {validMassime.map(({ item, originalIndex }) => (
             <Card
               key={originalIndex}
               hoverable
-              style={{
-                borderColor: selectedItems.massime.includes(originalIndex) ? '#1890ff' : '#f0f0f0',
-                backgroundColor: selectedItems.massime.includes(originalIndex) ? '#e6f7ff' : '#fff',
-              }}
+              className={classNames('selectable-card', {
+                'card-selected': selectedItems.massime.includes(originalIndex),
+              })}
               onClick={() => handleMassimeSelection(originalIndex)}
             >
-              <div
-                style={{
-                  maxHeight: '150px',
-                  overflowY: 'auto',
-                  resize: 'vertical',
-                }}
-              >
+              <div className="card-content">
                 <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{item}</pre>
               </div>
             </Card>
@@ -189,9 +163,13 @@ const ArticleDetail = ({ article, onClose }) => {
   if (article.brocardi_info?.Spiegazione) {
     panels.push({
       key: 'spiegazione',
-      label: (
-        <div
-          style={{ cursor: 'pointer', color: selectedItems.spiegazione ? '#1890ff' : 'inherit' }}
+      label: 'Spiegazione',
+      children: (
+        <Card
+          hoverable
+          className={classNames('selectable-card', {
+            'card-selected': selectedItems.spiegazione,
+          })}
           onClick={() =>
             setSelectedItems((prevState) => ({
               ...prevState,
@@ -199,13 +177,10 @@ const ArticleDetail = ({ article, onClose }) => {
             }))
           }
         >
-          {selectedItems.spiegazione ? <strong>Spiegazione</strong> : 'Spiegazione'}
-        </div>
-      ),
-      children: (
-        <pre style={{ whiteSpace: 'pre-wrap' }}>
-          {article.brocardi_info.Spiegazione}
-        </pre>
+          <div className="spiegazione-content">
+            {article.brocardi_info.Spiegazione}
+          </div>
+        </Card>
       ),
     });
   }
@@ -222,34 +197,15 @@ const ArticleDetail = ({ article, onClose }) => {
       minHeight={300}
       bounds="window"
       className="article-detail-rnd"
-      style={{ zIndex: 999 }}
+      style={{ zIndex }}
       enableUserSelectHack={false}
-      dragHandleClassName="modal-header" // Solo la header è draggabile
+      dragHandleClassName="modal-header"
+      onMouseDown={bringToFront}
+      onTouchStart={bringToFront}
     >
-      <div
-        className="article-detail-modal"
-        style={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: '#fff',
-          border: '1px solid #d9d9d9',
-          borderRadius: '4px',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="article-detail-modal">
         {/* Header */}
-        <div
-          className="modal-header"
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '8px',
-            background: '#f0f2f5',
-            borderBottom: '1px solid #d9d9d9',
-          }}
-        >
+        <div className="modal-header">
           <Title level={4} style={{ margin: 0 }}>
             {`${article.norma_data?.tipo_atto || 'Documento'} - Articolo ${
               article.norma_data?.numero_articolo || 'N/A'
@@ -272,24 +228,36 @@ const ArticleDetail = ({ article, onClose }) => {
           </div>
         </div>
 
+        {/* Posizione */}
+        {article.brocardi_info?.position && article.brocardi_info?.link && (
+          <Card
+            hoverable
+            className={classNames('selectable-card', {
+              'card-selected': selectedItems.position,
+            })}
+            onClick={() =>
+              setSelectedItems((prevState) => ({
+                ...prevState,
+                position: !prevState.position,
+              }))
+            }
+            style={{ margin: '16px', marginBottom: 0 }}
+          >
+            <Typography.Text>
+              Posizione:{' '}
+              <Typography.Link
+                href={article.brocardi_info.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {article.brocardi_info.position}
+              </Typography.Link>
+            </Typography.Text>
+          </Card>
+        )}
         {/* Content */}
-        <div style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
-          {/* Posizione come etichetta con link */}
-          {article.brocardi_info?.position && article.brocardi_info?.link && (
-            <div style={{ marginBottom: '16px' }}>
-              <Typography.Text>
-                Posizione:{' '}
-                <Typography.Link
-                  href={article.brocardi_info.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {article.brocardi_info.position}
-                </Typography.Link>
-              </Typography.Text>
-            </div>
-          )}
-
+        <div className="article-content">
           <CKEditor
             editor={ClassicEditor}
             data={editorData}
@@ -302,10 +270,8 @@ const ArticleDetail = ({ article, onClose }) => {
             }}
           />
 
-          {/* Informazioni Brocardi e Massime */}
-          {panels.length > 0 && (
-            <Collapse style={{ marginTop: '16px' }} items={panels} />
-          )}
+          {/* Brocardi, Massime, Spiegazione */}
+          {panels.length > 0 && <Collapse style={{ marginTop: '16px' }} items={panels} />}
         </div>
       </div>
     </Rnd>
@@ -330,6 +296,8 @@ ArticleDetail.propTypes = {
     }),
   }).isRequired,
   onClose: PropTypes.func.isRequired,
+  zIndex: PropTypes.number.isRequired,
+  bringToFront: PropTypes.func.isRequired,
 };
 
 export default ArticleDetail;

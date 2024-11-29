@@ -1,13 +1,97 @@
 /* ArticleDetail.styles.css */
-.article-detail-rnd {
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+
+.article-detail-modal {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    overflow: hidden;
   }
   
-  .article-detail-modal {
-    /* Già gestito inline */
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    background: #f0f2f5;
+    border-bottom: 1px solid #d9d9d9;
   }
   
-  .article-detail-minimized {
-    /* Già gestito inline */
+  .article-content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  
+  .minimized-window {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background-color: #1890ff;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+  }
+  
+  .card-selected {
+    border-color: #1890ff !important;
+    background-color: #e6f7ff !important;
+  }
+  
+  .massime-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .brocardi-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .card-content {
+    max-height: 150px;
+    overflow-y: auto;
+    resize: vertical;
+  }
+  
+  .position-link {
+    margin-bottom: 16px;
+  }
+  
+  .selectable-title {
+    cursor: pointer;
+  }
+  
+  .selected-title {
+    color: #1890ff;
+    font-weight: bold;
+  }
+
+  .selectable-card {
+    width: 100%;
+  }
+  
+  .card-selected {
+    border-color: #1890ff !important;
+    background-color: #e6f7ff !important;
+  }
+
+  .spiegazione-content {
+    max-height: 150px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    resize: vertical;
+    white-space: pre-wrap;
+    word-wrap: break-word;
   }
   

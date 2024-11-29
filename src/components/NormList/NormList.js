@@ -1,58 +1,126 @@
 // src/components/NormList/NormList.js
-import React, { useState } from 'react';
-import { Collapse, List, Typography, Badge } from 'antd';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { List, Typography, Collapse } from 'antd';
 import PropTypes from 'prop-types';
 import ArticleDetail from '../ArticleDetail/ArticleDetail';
+import { v4 as uuidv4 } from 'uuid';
+import SortableArticle from '../SortableArticle/SortableArticle';
+import { DragDropContext, Droppable } from 'react-beautiful-dnd';
 import './NormList.styles.css';
 
 const { Text } = Typography;
-
-const capitalizeFirstLetter = (stringa) => {
-  if (!stringa) return '';
-  return stringa.charAt(0).toUpperCase() + stringa.slice(1);
-};
-
-const groupArticlesByNorm = (data) => {
-  const grouped = {};
-
-  data.forEach((norm) => {
-    const key = `${norm.info.tipo_atto}-${norm.info.numero_atto || ''}-${norm.info.data || ''}`;
-
-    if (!grouped[key]) {
-      grouped[key] = { ...norm, articles: [] };
-    }
-
-    grouped[key].articles.push(...norm.articles);
-  });
-
-  return Object.values(grouped);
-};
+const { Panel } = Collapse;
 
 const NormList = React.memo(({ data }) => {
+  const [articlesData, setArticlesData] = useState({});
+  const [pinnedArticles, setPinnedArticles] = useState([]);
   const [openArticles, setOpenArticles] = useState([]);
   const [zIndices, setZIndices] = useState({});
   const [highestZIndex, setHighestZIndex] = useState(1000);
 
-  const bringToFront = (articleId) => {
-    setHighestZIndex((prev) => prev + 1);
-    setZIndices((prevState) => ({
-      ...prevState,
-      [articleId]: highestZIndex + 1,
-    }));
-  };
+  // Load pinned articles from localStorage
+  useEffect(() => {
+    const storedPinned = localStorage.getItem('pinnedArticles');
+    if (storedPinned) {
+      setPinnedArticles(JSON.parse(storedPinned));
+    }
+  }, []);
 
-  const handleArticleClick = (article) => {
-    setOpenArticles((prevArticles) => {
-      if (prevArticles.find((a) => a.id === article.id)) {
-        bringToFront(article.id);
-        return prevArticles;
-      }
-      bringToFront(article.id);
-      return [...prevArticles, article];
+  // Save pinned articles to localStorage
+  useEffect(() => {
+    localStorage.setItem('pinnedArticles', JSON.stringify(pinnedArticles));
+  }, [pinnedArticles]);
+
+  // Initialize articlesData
+  useEffect(() => {
+    const groupedArticles = {};
+
+    data.forEach((norm) => {
+      const normKey = norm.key || uuidv4();
+      const normInfo = norm.info;
+
+      const articlesWithIds = norm.articles.map((article) => ({
+        ...article,
+        id: article.id ? article.id.toString() : uuidv4(),
+        normKey,
+        normInfo,
+      }));
+
+      // Sort articles, placing pinned ones at the top
+      const sortedArticles = [
+        ...articlesWithIds.filter((article) => pinnedArticles.includes(article.id)),
+        ...articlesWithIds.filter((article) => !pinnedArticles.includes(article.id)),
+      ];
+
+      groupedArticles[normKey] = {
+        normInfo,
+        articles: sortedArticles,
+      };
+    });
+
+    setArticlesData(groupedArticles);
+  }, [data, pinnedArticles]);
+
+  // Drag and drop handler
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const sourceNormKey = result.source.droppableId;
+    const destNormKey = result.destination.droppableId;
+
+    const sourceArticles = Array.from(articlesData[sourceNormKey].articles);
+    const destArticles = Array.from(articlesData[destNormKey].articles);
+
+    const [movedArticle] = sourceArticles.splice(result.source.index, 1);
+
+    // Update the normKey if moved to a different norm
+    if (sourceNormKey !== destNormKey) {
+      movedArticle.normKey = destNormKey;
+    }
+
+    destArticles.splice(result.destination.index, 0, movedArticle);
+
+    setArticlesData({
+      ...articlesData,
+      [sourceNormKey]: {
+        ...articlesData[sourceNormKey],
+        articles: sourceArticles,
+      },
+      [destNormKey]: {
+        ...articlesData[destNormKey],
+        articles: destArticles,
+      },
     });
   };
 
-  const handleCloseArticle = (articleId) => {
+  // Article actions
+  const bringToFront = useCallback(
+    (articleId) => {
+      setHighestZIndex((prev) => prev + 1);
+      setZIndices((prevState) => ({
+        ...prevState,
+        [articleId]: highestZIndex + 1,
+      }));
+    },
+    [highestZIndex]
+  );
+
+  const handleArticleClick = useCallback(
+    (article) => {
+      setOpenArticles((prevArticles) => {
+        if (prevArticles.find((a) => a.id === article.id)) {
+          bringToFront(article.id);
+          return prevArticles;
+        }
+        bringToFront(article.id);
+        return [...prevArticles, article];
+      });
+    },
+    [bringToFront]
+  );
+
+  const handleCloseArticle = useCallback((articleId) => {
     setOpenArticles((prevArticles) =>
       prevArticles.filter((article) => article.id !== articleId)
     );
@@ -61,95 +129,77 @@ const NormList = React.memo(({ data }) => {
       delete newZIndices[articleId];
       return newZIndices;
     });
+  }, []);
+
+  const handleDeleteArticle = (articleId) => {
+    const updatedArticlesData = { ...articlesData };
+    Object.keys(updatedArticlesData).forEach((normKey) => {
+      const normGroup = updatedArticlesData[normKey];
+      normGroup.articles = normGroup.articles.filter(
+        (article) => article.id !== articleId
+      );
+    });
+    setArticlesData(updatedArticlesData);
+    setPinnedArticles((prevPinned) =>
+      prevPinned.filter((id) => id !== articleId)
+    );
   };
 
-  if (data.length === 0) {
+  const handlePinArticle = (articleId) => {
+    setPinnedArticles((prevPinned) => {
+      if (prevPinned.includes(articleId)) {
+        return prevPinned.filter((id) => id !== articleId);
+      } else {
+        return [articleId, ...prevPinned];
+      }
+    });
+  };
+
+  if (Object.keys(articlesData).length === 0) {
     return <Text type="secondary">Nessun risultato da visualizzare.</Text>;
   }
 
-  const groupedData = groupArticlesByNorm(data);
-
-  const collapseItems = groupedData.map((norm, index) => {
-    const { tipo_atto, numero_atto, data: dataNorma } = norm.info;
-    const numeroArticoli = norm.articles.length;
-    const key = `${tipo_atto}-${numero_atto || ''}-${dataNorma || ''}-${index}`;
-    const tipoAttoCapitalized = capitalizeFirstLetter(tipo_atto);
-
-    let label = tipoAttoCapitalized;
-    if (numero_atto) {
-      label += ` n° ${numero_atto}`;
-    }
-    if (dataNorma) {
-      label += ` (${dataNorma})`;
-    }
-
-    const articlesList = norm.articles.map((article, idx) => {
-      const articleWithId = {
-        ...article,
-        id: article.id || `${key}-article-${idx}`,
-      };
-
-      const { numero_articolo, versione, data_versione, allegato } = articleWithId.norma_data;
-      const breveDescrizione = articleWithId.article_text
-        ? articleWithId.article_text.split('\n')[0].trim()
-        : 'Descrizione non disponibile';
-      const position = articleWithId.brocardi_info?.position || 'Posizione non disponibile';
-
-      return (
-        <List.Item
-          key={articleWithId.id}
-          onClick={() => handleArticleClick(articleWithId)}
-          style={{ cursor: 'pointer', padding: '8px 16px' }}
-          aria-label={`Articolo ${numero_articolo}`}
-        >
-          <List.Item.Meta
-            title={<Text strong>{`Articolo ${numero_articolo}`}</Text>}
-            description={
-              <>
-                <Text>{breveDescrizione}</Text>
-                <br />
-                <Text type="secondary">Posizione: {position}</Text>
-                <br />
-                <Text type="secondary">Versione: {versione}</Text>
-                {data_versione && (
-                  <>
-                    {' | '}
-                    <Text type="secondary">Data Versione: {data_versione}</Text>
-                  </>
-                )}
-                {allegato && (
-                  <>
-                    {' | '}
-                    <Text type="secondary">Allegato: {allegato}</Text>
-                  </>
-                )}
-              </>
-            }
-          />
-        </List.Item>
-      );
-    });
-
-    return {
-      key,
-      label: (
-        <span>
-          {label}{' '}
-          <Badge
-            count={numeroArticoli}
-            showZero
-            style={{ backgroundColor: '#52c41a', marginLeft: '8px' }}
-            title={`${numeroArticoli} articolo${numeroArticoli > 1 ? 'i' : ''}`}
-          />
-        </span>
-      ),
-      children: <List itemLayout="horizontal">{articlesList}</List>,
-    };
-  });
-
   return (
     <>
-      <Collapse accordion items={collapseItems} />
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Collapse accordion>
+          {Object.keys(articlesData).map((normKey) => {
+            const normGroup = articlesData[normKey];
+            const normInfo = normGroup.normInfo;
+            const panelHeader = `${normInfo.tipo_atto} ${
+              normInfo.numero_atto ? normInfo.numero_atto : ''
+            } ${normInfo.data ? `(${normInfo.data})` : ''}`;
+
+            return (
+              <Panel header={panelHeader} key={normKey}>
+                <Droppable droppableId={normKey}>
+                  {(provided) => (
+                    <List
+                      itemLayout="horizontal"
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                    >
+                      {normGroup.articles.map((article, index) => (
+                        <SortableArticle
+                          key={article.id}
+                          article={article}
+                          index={index}
+                          onArticleClick={handleArticleClick}
+                          onDeleteArticle={handleDeleteArticle}
+                          onPinArticle={handlePinArticle}
+                          isPinned={pinnedArticles.includes(article.id)}
+                        />
+                      ))}
+                      {provided.placeholder}
+                    </List>
+                  )}
+                </Droppable>
+              </Panel>
+            );
+          })}
+        </Collapse>
+      </DragDropContext>
+
       {openArticles.map((article) => (
         <ArticleDetail
           key={article.id}
@@ -166,7 +216,7 @@ const NormList = React.memo(({ data }) => {
 NormList.propTypes = {
   data: PropTypes.arrayOf(
     PropTypes.shape({
-      key: PropTypes.string.isRequired,
+      key: PropTypes.string,
       info: PropTypes.shape({
         tipo_atto: PropTypes.string.isRequired,
         numero_atto: PropTypes.string,
@@ -177,12 +227,11 @@ NormList.propTypes = {
           id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
           norma_data: PropTypes.shape({
             numero_articolo: PropTypes.string.isRequired,
-            versione: PropTypes.string.isRequired,
+            versione: PropTypes.string,
             data_versione: PropTypes.string,
             allegato: PropTypes.string,
           }).isRequired,
           article_text: PropTypes.string,
-          url: PropTypes.string,
           brocardi_info: PropTypes.shape({
             position: PropTypes.string,
             link: PropTypes.string,

@@ -243,8 +243,8 @@ const SearchForm = ({ onSearch }) => {
                   trigger="click"
                   placement="right"
                   overlayStyle={{ zIndex: 2000 }}
-                  visible={isPopoverVisible}
-                  onVisibleChange={(visible) => setIsPopoverVisible(visible)}
+                  open={isPopoverVisible}
+                  onOpenChange={(visible) => setIsPopoverVisible(visible)}
                 >
                   <CalendarOutlined style={{ marginLeft: '8px', cursor: 'pointer' }} aria-label="Seleziona Data Versione" />
                 </Popover>

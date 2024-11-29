@@ -1,0 +1,13 @@
+/* ArticleDetail.styles.css */
+.article-detail-rnd {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  .article-detail-modal {
+    /* Già gestito inline */
+  }
+  
+  .article-detail-minimized {
+    /* Già gestito inline */
+  }
+  

@@ -1,34 +1,64 @@
-import React from 'react';
+// src/components/NormList/NormList.js
+import React, { useState } from 'react';
 import { Collapse, List, Typography, Badge } from 'antd';
 import PropTypes from 'prop-types';
+import ArticleDetail from '../ArticleDetail/ArticleDetail'; // Importa il componente ArticleDetail
 import './NormList.styles.css'; // Importa il CSS opzionale
 
 const { Text } = Typography;
-const { Panel } = Collapse;
 
-/**
- * Funzione helper per capitalizzare la prima lettera di una stringa.
- * @param {string} stringa - La stringa da capitalizzare.
- * @returns {string} - La stringa con la prima lettera capitalizzata.
- */
 const capitalizeFirstLetter = (stringa) => {
   if (!stringa) return '';
   return stringa.charAt(0).toUpperCase() + stringa.slice(1);
 };
 
-const NormList = React.memo(({ data, onArticleClick }) => {
+const groupArticlesByNorm = (data) => {
+  const grouped = {};
+
+  data.forEach((norm) => {
+    const key = `${norm.info.tipo_atto}-${norm.info.numero_atto || ''}-${norm.info.data || ''}`;
+
+    if (!grouped[key]) {
+      grouped[key] = { ...norm, articles: [] };
+    }
+
+    grouped[key].articles.push(...norm.articles);
+  });
+
+  return Object.values(grouped);
+};
+
+const NormList = React.memo(({ data }) => {
+  const [openArticles, setOpenArticles] = useState([]);
+
+  const handleArticleClick = (article) => {
+    setOpenArticles((prevArticles) => {
+      // Evita duplicati
+      if (prevArticles.find((a) => a.id === article.id)) {
+        return prevArticles;
+      }
+      return [...prevArticles, article];
+    });
+  };
+
+  const handleCloseArticle = (articleId) => {
+    setOpenArticles((prevArticles) =>
+      prevArticles.filter((article) => article.id !== articleId)
+    );
+  };
+
   if (data.length === 0) {
     return <Text type="secondary">Nessun risultato da visualizzare.</Text>;
   }
 
-  // Converti i dati in formato compatibile con il Collapse
-  const collapsePanels = data.map((norm) => {
+  const groupedData = groupArticlesByNorm(data);
+
+  const collapseItems = groupedData.map((norm, index) => {
     const { tipo_atto, numero_atto, data: dataNorma } = norm.info;
     const numeroArticoli = norm.articles.length;
-    const key = norm.key; // Assicurati che ogni norma abbia una chiave unica
+    const key = `${tipo_atto}-${numero_atto || ''}-${dataNorma || ''}-${index}`;
     const tipoAttoCapitalized = capitalizeFirstLetter(tipo_atto);
 
-    // Costruisci il label includendo solo gli elementi definiti
     let label = tipoAttoCapitalized;
     if (numero_atto) {
       label += ` n° ${numero_atto}`;
@@ -37,76 +67,90 @@ const NormList = React.memo(({ data, onArticleClick }) => {
       label += ` (${dataNorma})`;
     }
 
-    return (
-      <Panel
-        header={
-          <span>
-            {label}{' '}
-            <Badge
-              count={numeroArticoli}
-              showZero
-              style={{ backgroundColor: '#52c41a', marginLeft: '8px' }}
-              title={`${numeroArticoli} articolo${numeroArticoli > 1 ? 'i' : ''}`}
-            />
-          </span>
-        }
-        key={key} // Assicurati che ogni Panel abbia una chiave unica
-      >
-        <List
-          itemLayout="horizontal"
-          dataSource={norm.articles}
-          renderItem={(article) => {
-            const { numero_articolo, versione, data_versione, allegato } = article.norma_data;
-            const breveDescrizione = article.article_text
-              ? article.article_text.split('\n')[0].trim() // Usa la prima riga del testo dell'articolo come descrizione
-              : 'Descrizione non disponibile';
-            const position = article.brocardi_info?.position || 'Posizione non disponibile';
+    const articlesList = norm.articles.map((article, idx) => {
+      // Assegna un ID univoco all'articolo se non esiste
+      const articleWithId = {
+        ...article,
+        id: article.id || `${key}-article-${idx}`,
+      };
 
-            return (
-              <List.Item
-                onClick={() => onArticleClick(article)}
-                style={{ cursor: 'pointer', padding: '8px 16px' }}
-                aria-label={`Articolo ${numero_articolo}`}
-              >
-                <List.Item.Meta
-                  title={<Text strong>{`Articolo ${numero_articolo}`}</Text>}
-                  description={
-                    <>
-                      <Text>{breveDescrizione}</Text>
-                      <br />
-                      <Text type="secondary">Posizione: {position}</Text>
-                      <br />
-                      <Text type="secondary">Versione: {versione}</Text>
-                      {data_versione && (
-                        <>
-                          {' | '}
-                          <Text type="secondary">Data Versione: {data_versione}</Text>
-                        </>
-                      )}
-                      {allegato && (
-                        <>
-                          {' | '}
-                          <Text type="secondary">Allegato: {allegato}</Text>
-                        </>
-                      )}
-                    </>
-                  }
-                />
-              </List.Item>
-            );
-          }}
-        />
-      </Panel>
-    );
+      const { numero_articolo, versione, data_versione, allegato } = articleWithId.norma_data;
+      const breveDescrizione = articleWithId.article_text
+        ? articleWithId.article_text.split('\n')[0].trim()
+        : 'Descrizione non disponibile';
+      const position = articleWithId.brocardi_info?.position || 'Posizione non disponibile';
+
+      return (
+        <List.Item
+          key={articleWithId.id}
+          onClick={() => handleArticleClick(articleWithId)}
+          style={{ cursor: 'pointer', padding: '8px 16px' }}
+          aria-label={`Articolo ${numero_articolo}`}
+        >
+          <List.Item.Meta
+            title={<Text strong>{`Articolo ${numero_articolo}`}</Text>}
+            description={
+              <>
+                <Text>{breveDescrizione}</Text>
+                <br />
+                <Text type="secondary">Posizione: {position}</Text>
+                <br />
+                <Text type="secondary">Versione: {versione}</Text>
+                {data_versione && (
+                  <>
+                    {' | '}
+                    <Text type="secondary">Data Versione: {data_versione}</Text>
+                  </>
+                )}
+                {allegato && (
+                  <>
+                    {' | '}
+                    <Text type="secondary">Allegato: {allegato}</Text>
+                  </>
+                )}
+              </>
+            }
+          />
+        </List.Item>
+      );
+    });
+
+    return {
+      key,
+      label: (
+        <span>
+          {label}{' '}
+          <Badge
+            count={numeroArticoli}
+            showZero
+            style={{ backgroundColor: '#52c41a', marginLeft: '8px' }}
+            title={`${numeroArticoli} articolo${numeroArticoli > 1 ? 'i' : ''}`}
+          />
+        </span>
+      ),
+      children: <List itemLayout="horizontal">{articlesList}</List>,
+    };
   });
 
-  return <Collapse accordion>{collapsePanels}</Collapse>;
+  return (
+    <>
+      <Collapse accordion items={collapseItems} />
+      {/* Renderizza le finestre degli articoli aperti */}
+      {openArticles.map((article) => (
+        <ArticleDetail
+          key={article.id}
+          article={article}
+          onClose={() => handleCloseArticle(article.id)}
+        />
+      ))}
+    </>
+  );
 });
 
 NormList.propTypes = {
   data: PropTypes.arrayOf(
     PropTypes.shape({
-      key: PropTypes.string.isRequired, // Aggiungi la proprietà key
+      key: PropTypes.string.isRequired,
       info: PropTypes.shape({
         tipo_atto: PropTypes.string.isRequired,
         numero_atto: PropTypes.string,
@@ -114,6 +158,7 @@ NormList.propTypes = {
       }).isRequired,
       articles: PropTypes.arrayOf(
         PropTypes.shape({
+          id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
           norma_data: PropTypes.shape({
             numero_articolo: PropTypes.string.isRequired,
             versione: PropTypes.string.isRequired,
@@ -123,13 +168,12 @@ NormList.propTypes = {
           article_text: PropTypes.string,
           url: PropTypes.string,
           brocardi_info: PropTypes.shape({
-            position: PropTypes.string, // Aggiungi il campo position
+            position: PropTypes.string,
           }),
         })
       ).isRequired,
     })
   ).isRequired,
-  onArticleClick: PropTypes.func.isRequired,
 };
 
 export default NormList;

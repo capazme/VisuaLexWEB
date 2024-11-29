@@ -1,7 +1,7 @@
 // src/App.js
 import React, { useState } from 'react';
 import { Layout, Typography, message } from 'antd';
-import FloatingSearchBall from './components/SearchForm/FloatingSearchBall';
+import FloatingSearchBall from './components/FloatingSearchBall/FloatingSearchBall';
 import NormList from './components/NormList/NormList';
 import ArticleDetail from './components/ArticleDetail/ArticleDetail';
 import { fetchAllData } from './api/fetchAllData';

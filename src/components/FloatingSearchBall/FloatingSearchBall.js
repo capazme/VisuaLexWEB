@@ -1,21 +1,18 @@
-// src/components/SearchForm/FloatingSearchBall.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSpring, animated } from 'react-spring';
 import { useDrag } from '@use-gesture/react';
-import { Button, Typography, Input, message } from 'antd'; // Aggiungi 'message' all'import
-import PropTypes from 'prop-types';
-import './FloatingSearchBall.styles.css'; // Importa il tuo file CSS
+import { Button, Typography } from 'antd';
+import SearchForm from '../SearchForm/SearchForm'; // Importa il tuo modulo di ricerca
 
 const { Title } = Typography;
-const { Search } = Input;
+
+// Definisci clamp fuori dal componente
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 // Dimensioni della pallina fluttuante e del form
 const BALL_SIZE = 50; // in px
 const FORM_WIDTH = 320; // in px
-const FORM_HEIGHT = 400; // in px
-
-// Funzione helper per limitare i valori
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+const FORM_HEIGHT = 400; // approssimazione, potrebbe variare
 
 const FloatingSearchBall = ({ onSearch }) => {
   const [isOpen, setIsOpen] = useState(false); // Stato per apertura del form
@@ -191,7 +188,7 @@ const FloatingSearchBall = ({ onSearch }) => {
             }}
           >
             <Title level={5} style={{ margin: 0 }}>
-              Ricerca Norma
+              Ricerca Norme
             </Title>
             <Button type="text" onClick={() => setIsOpen(false)} aria-label="Chiudi form di ricerca">
               ✕
@@ -202,10 +199,6 @@ const FloatingSearchBall = ({ onSearch }) => {
       )}
     </>
   );
-};
-
-FloatingSearchBall.propTypes = {
-  onSearch: PropTypes.func.isRequired,
 };
 
 export default FloatingSearchBall;
